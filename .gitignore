@@ -25,6 +25,14 @@ trojan-go
 
 # Dev artifacts
 .tool-versions
-BUGFIX_PLAN.md
 CLAUDE.md
 demos/
+.claude/
+
+# Sensitive files
+*.pem
+*.p12
+.env
+.env.*
+credentials*
+secrets*
