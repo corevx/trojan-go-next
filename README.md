@@ -39,10 +39,15 @@ For questions, bug reports, or suggestions, join the [Telegram group](https://t.
 
 ### GUI Clients
 
-Trojan-Go server is compatible with all original Trojan clients (Igniter, ShadowRocket, etc.). The following clients support Trojan-Go extensions (WebSocket, Mux, etc.):
+Trojan-Go server is compatible with all clients that support the standard Trojan protocol. The following actively maintained clients work with Trojan-Go:
 
-- [Qv2ray](https://github.com/Qv2ray/Qv2ray) — Cross-platform client (Windows / macOS / Linux) using the Trojan-Go core
-- [Igniter-Go](https://github.com/p4gefau1t/trojan-go-android) — Android client, fork of Igniter with Trojan-Go core
+- [v2rayN](https://github.com/2dust/v2rayN) — Windows / macOS / Linux client (Xray / sing-box core)
+- [Clash Verge Rev](https://github.com/clash-verge-rev/clash-verge-rev) — Cross-platform client (Windows / macOS / Linux) based on Mihomo
+- [NekoBox for Android](https://github.com/MatsuriDayo/NekoBoxForAndroid) — Android client based on sing-box
+- [ShadowRocket](https://apps.apple.com/app/shadowrocket/id932747118) — iOS client
+- [sing-box](https://github.com/SagerNet/sing-box) — Universal proxy platform (CLI / library)
+
+> **Note:** The above clients support the standard Trojan protocol. Trojan-Go extensions (WebSocket transport, smux multiplexing, Shadowsocks AEAD secondary encryption) require running the `trojan-go` binary directly. The previous GUI clients with built-in Trojan-Go core ([Qv2ray](https://github.com/Qv2ray/Qv2ray) and [Igniter-Go](https://github.com/p4gefau1t/trojan-go-android)) are no longer maintained.
 
 ## Quick Start
 
