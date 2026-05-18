@@ -33,6 +33,7 @@ type TLSConfig struct {
 	Fingerprint          string   `json:"fingerprint" yaml:"fingerprint"`
 	KeyLogPath           string   `json:"key_log" yaml:"key-log"`
 	CertCheckRate        int      `json:"cert_check_rate" yaml:"cert-check-rate"`
+	MinTLSVersion        string   `json:"min_tls_version" yaml:"min-tls-version"`
 }
 
 func init() {

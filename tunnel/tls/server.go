@@ -27,6 +27,20 @@ import (
 	"github.com/p4gefau1t/trojan-go/tunnel/websocket"
 )
 
+func parseTLSVersion(v string) uint16 {
+	switch strings.ToLower(v) {
+	case "1.3":
+		return tls.VersionTLS13
+	case "1.2":
+		return tls.VersionTLS12
+	case "1.1":
+		return tls.VersionTLS11
+	default:
+		log.Warn("unknown tls version " + v + ", defaulting to TLS 1.2")
+		return tls.VersionTLS12
+	}
+}
+
 // Server is a tls server
 type Server struct {
 	fallbackAddress    *tunnel.Address
@@ -41,6 +55,7 @@ type Server struct {
 	sessionTicket      bool
 	curve              []tls.CurveID
 	keyLogger          io.WriteCloser
+	minTLSVersion      uint16
 	connChan           chan tunnel.Conn
 	wsChan             chan tunnel.Conn
 	redir              *redirector.Redirector
@@ -86,6 +101,7 @@ func (s *Server) acceptLoop() {
 				}
 			}()
 			tlsConfig := &tls.Config{
+				MinVersion:               s.minTLSVersion,
 				CipherSuites:             s.cipherSuite,
 				PreferServerCipherSuites: s.PreferServerCipher,
 				SessionTicketsDisabled:   !s.sessionTicket,
@@ -327,6 +343,30 @@ func NewServer(ctx context.Context, underlay tunnel.Server) (*Server, error) {
 		return nil, common.NewError("tls failed to load key pair")
 	}
 
+	// Validate certificate expiry
+	if keyPair.Leaf != nil {
+		now := time.Now()
+		if now.After(keyPair.Leaf.NotAfter) {
+			return nil, common.NewError(fmt.Sprintf("tls certificate expired on %s", keyPair.Leaf.NotAfter.Format("2006-01-02")))
+		}
+		daysUntilExpiry := keyPair.Leaf.NotAfter.Sub(now).Hours() / 24
+		log.WithFields(log.Fields{
+			"subject":    keyPair.Leaf.Subject.CommonName,
+			"not_before": keyPair.Leaf.NotBefore.Format("2006-01-02"),
+			"not_after":  keyPair.Leaf.NotAfter.Format("2006-01-02"),
+			"days_left":  int(daysUntilExpiry),
+		}).Info("tls certificate loaded")
+		if daysUntilExpiry < 30 {
+			log.Warn(fmt.Sprintf("tls certificate expires in %.0f days", daysUntilExpiry))
+		}
+	}
+
+	// Parse minimum TLS version
+	minVersion := uint16(tls.VersionTLS12) // default to TLS 1.2
+	if cfg.TLS.MinTLSVersion != "" {
+		minVersion = parseTLSVersion(cfg.TLS.MinTLSVersion)
+	}
+
 	var keyLogger io.WriteCloser
 	if cfg.TLS.KeyLogPath != "" {
 		log.Warn("tls key logging activated. USE OF KEY LOGGING COMPROMISES SECURITY. IT SHOULD ONLY BE USED FOR DEBUGGING.")
@@ -358,6 +398,7 @@ func NewServer(ctx context.Context, underlay tunnel.Server) (*Server, error) {
 		keyPair:            []tls.Certificate{*keyPair},
 		keyLogger:          keyLogger,
 		cipherSuite:        cipherSuite,
+		minTLSVersion:      minVersion,
 		ctx:                ctx,
 		cancel:             cancel,
 	}
