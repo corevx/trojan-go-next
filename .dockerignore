@@ -1,0 +1,13 @@
+build/
+*.zip
+*.key
+*.crt
+demos/
+.github/
+.tool-versions
+BUGFIX_PLAN.md
+CLAUDE.md
+test_server.json
+test_client.json
+README.md
+docs/

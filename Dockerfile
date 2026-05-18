@@ -1,26 +1,34 @@
-FROM golang:alpine AS builder
-WORKDIR /
-ARG REF
-RUN apk add git make &&\
-    git clone https://github.com/p4gefau1t/trojan-go.git
-RUN if [[ -z "${REF}" ]]; then \
-        echo "No specific commit provided, use the latest one." \
-    ;else \
-        echo "Use commit ${REF}" &&\
-        cd trojan-go &&\
-        git checkout ${REF} \
-    ;fi
-RUN cd trojan-go &&\
-    make &&\
-    wget https://github.com/v2fly/domain-list-community/raw/release/dlc.dat -O build/geosite.dat &&\
-    wget https://github.com/v2fly/geoip/raw/release/geoip.dat -O build/geoip.dat &&\
-    wget https://github.com/v2fly/geoip/raw/release/geoip-only-cn-private.dat -O build/geoip-only-cn-private.dat
+FROM docker.1ms.run/library/golang:1.22-alpine AS builder
 
-FROM alpine
-WORKDIR /
+RUN apk add --no-cache git make curl
+
+WORKDIR /src
+COPY go.mod go.sum ./
+RUN GOPROXY=https://goproxy.cn,direct go mod download
+
+COPY . .
+
+ARG VERSION=dev
+ARG COMMIT=unknown
+RUN GOPROXY=https://goproxy.cn,direct CGO_ENABLED=0 go build \
+    -tags "full" -trimpath \
+    -ldflags="-s -w -buildid= -X github.com/p4gefau1t/trojan-go/constant.Version=${VERSION} -X github.com/p4gefau1t/trojan-go/constant.Commit=${COMMIT}" \
+    -o build/trojan-go
+
+RUN cd build && \
+    curl -fsSL -o geosite.dat "https://cdn.jsdelivr.net/gh/v2fly/domain-list-community@release/dlc.dat" && \
+    curl -fsSL -o geoip.dat "https://cdn.jsdelivr.net/gh/v2fly/geoip@release/geoip.dat" && \
+    curl -fsSL -o geoip-only-cn-private.dat "https://cdn.jsdelivr.net/gh/v2fly/geoip@release/geoip-only-cn-private.dat"
+
+FROM docker.1ms.run/library/alpine:3.20
+
 RUN apk add --no-cache tzdata ca-certificates
-COPY --from=builder /trojan-go/build /usr/local/bin/
-COPY --from=builder /trojan-go/example/server.json /etc/trojan-go/config.json
+
+WORKDIR /etc/trojan-go
+COPY --from=builder /src/build/trojan-go /usr/local/bin/trojan-go
+COPY --from=builder /src/build/*.dat /etc/trojan-go/
+
+EXPOSE 443 8443
 
 ENTRYPOINT ["/usr/local/bin/trojan-go", "-config"]
 CMD ["/etc/trojan-go/config.json"]
