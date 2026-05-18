@@ -8,11 +8,17 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/p4gefau1t/trojan-go/common"
 	"github.com/p4gefau1t/trojan-go/config"
 	"github.com/p4gefau1t/trojan-go/log"
+	"github.com/p4gefau1t/trojan-go/metric"
 	"github.com/p4gefau1t/trojan-go/tunnel"
+)
+
+var (
+	activeConns = metric.RegisterGauge("trojan_active_connections", "Number of currently active connections")
 )
 
 var bufPool = sync.Pool{
@@ -67,7 +73,14 @@ func (p *Proxy) relayConnLoop() {
 					continue
 				}
 				go func(inbound tunnel.Conn) {
-					defer inbound.Close()
+					connID := common.NewConnID()
+					startTime := time.Now()
+					activeConns.Inc()
+					log.WithField("conn_id", connID).WithField("remote", inbound.RemoteAddr()).Debug("conn relay started")
+					defer func() {
+						activeConns.Dec()
+						inbound.Close()
+					}()
 					outbound, err := p.sink.DialConn(inbound.Metadata().Address, nil)
 					if err != nil {
 						log.Error(common.NewError("proxy failed to dial connection").Base(err))
@@ -90,7 +103,7 @@ func (p *Proxy) relayConnLoop() {
 						log.Debug("shutting down conn relay")
 						return
 					}
-					log.Debug("conn relay ends")
+					log.WithField("conn_id", connID).WithField("duration", time.Since(startTime).Round(time.Millisecond)).Debug("conn relay ends")
 				}(inbound)
 			}
 		}(source)

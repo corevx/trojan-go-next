@@ -6,17 +6,25 @@ import (
 	"io"
 	"net"
 	"sync/atomic"
+	"time"
 
 	"github.com/p4gefau1t/trojan-go/api"
 	"github.com/p4gefau1t/trojan-go/common"
 	"github.com/p4gefau1t/trojan-go/config"
 	"github.com/p4gefau1t/trojan-go/log"
+	"github.com/p4gefau1t/trojan-go/metric"
 	"github.com/p4gefau1t/trojan-go/redirector"
 	"github.com/p4gefau1t/trojan-go/statistic"
 	"github.com/p4gefau1t/trojan-go/statistic/memory"
 	"github.com/p4gefau1t/trojan-go/statistic/mysql"
 	"github.com/p4gefau1t/trojan-go/tunnel"
 	"github.com/p4gefau1t/trojan-go/tunnel/mux"
+)
+
+var (
+	connTotal = metric.RegisterCounter("trojan_connections_total", "Total number of trojan connections accepted")
+	connDuration = metric.RegisterHistogram("trojan_connection_duration_seconds", "Connection duration in seconds",
+		[]float64{0.1, 0.5, 1, 5, 10, 30, 60, 300, 600, 1800, 3600})
 )
 
 // InboundConn is a trojan inbound connection
@@ -26,8 +34,10 @@ type InboundConn struct {
 	// must be 64-bit aligned on 32-bit systems.
 	// Reference: https://github.com/golang/go/issues/599
 	// Solution: https://github.com/golang/go/issues/11891#issuecomment-433623786
-	sent uint64
-	recv uint64
+	sent     uint64
+	recv     uint64
+	connID   common.ConnID
+	connTime time.Time
 
 	net.Conn
 	auth     statistic.Authenticator
@@ -56,8 +66,17 @@ func (c *InboundConn) Read(p []byte) (int, error) {
 }
 
 func (c *InboundConn) Close() error {
-	log.Info("user", c.hash, "from", c.Conn.RemoteAddr(), "tunneling to", c.metadata.Address, "closed",
-		"sent:", common.HumanFriendlyTraffic(atomic.LoadUint64(&c.sent)), "recv:", common.HumanFriendlyTraffic(atomic.LoadUint64(&c.recv)))
+	duration := time.Since(c.connTime)
+	connDuration.Observe(duration.Seconds())
+	log.WithFields(log.Fields{
+		"conn_id":  c.connID,
+		"user":     c.hash,
+		"remote":   c.Conn.RemoteAddr().String(),
+		"target":   c.metadata.Address.String(),
+		"sent":     common.HumanFriendlyTraffic(atomic.LoadUint64(&c.sent)),
+		"recv":     common.HumanFriendlyTraffic(atomic.LoadUint64(&c.recv)),
+		"duration": duration.Round(time.Millisecond),
+	}).Info("connection closed")
 	c.user.DelIP(c.ip)
 	return c.Conn.Close()
 }
@@ -146,9 +165,12 @@ func (s *Server) acceptLoop() {
 			defer rewindConn.StopBuffering()
 
 			inboundConn := &InboundConn{
-				Conn: rewindConn,
-				auth: s.auth,
+				Conn:     rewindConn,
+				auth:     s.auth,
+				connID:   common.NewConnID(),
+				connTime: time.Now(),
 			}
+			connTotal.Inc()
 
 			if err := inboundConn.Auth(); err != nil {
 				rewindConn.Rewind()
