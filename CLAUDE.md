@@ -67,6 +67,17 @@ Context-based dependency injection (`config/config.go`). Each package registers 
 
 `option/option.go` implements a priority-based handler chain. `PopOptionHandler()` returns the highest-priority handler: easy mode (50) > version/URL (10) > stdin (0) > config file (-1).
 
+## Git & Release 工作流
+
+- 每完成一个功能性阶段后立即 commit，不要积攒大量改动后一次性提交
+- commit message 使用中文，清晰描述变更意图
+- 重要功能性更新或修改，按照语义化版本号（SemVer）更新 `version/` 中的版本号并发布
+- 版本号格式：`MAJOR.MINOR.PATCH`（如 `0.11.0`）
+  - MAJOR：不兼容的 API 变更
+  - MINOR：向后兼容的功能新增
+  - PATCH：向后兼容的 bug 修复
+- 不主动 push 到远程，除非用户明确要求
+
 ## Key Conventions
 
 - GeoIP/GeoSite data files (`.dat`) are loaded from the binary's directory or `TROJAN_GO_LOCATION_ASSET` env var
