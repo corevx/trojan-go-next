@@ -1,4 +1,4 @@
-FROM docker.1ms.run/library/golang:1.22-alpine AS builder
+FROM golang:1.22-alpine AS builder
 
 RUN apk add --no-cache git make curl
 
@@ -20,7 +20,7 @@ RUN cd build && \
     curl -fsSL -o geoip.dat "https://cdn.jsdelivr.net/gh/v2fly/geoip@release/geoip.dat" && \
     curl -fsSL -o geoip-only-cn-private.dat "https://cdn.jsdelivr.net/gh/v2fly/geoip@release/geoip-only-cn-private.dat"
 
-FROM docker.1ms.run/library/alpine:3.20
+FROM alpine:3.20
 
 RUN apk add --no-cache tzdata ca-certificates
 
