@@ -7,12 +7,19 @@ import (
 	"net"
 	"os"
 	"strings"
+	"sync"
 
 	"github.com/p4gefau1t/trojan-go/common"
 	"github.com/p4gefau1t/trojan-go/config"
 	"github.com/p4gefau1t/trojan-go/log"
 	"github.com/p4gefau1t/trojan-go/tunnel"
 )
+
+var bufPool = sync.Pool{
+	New: func() interface{} {
+		return make([]byte, MaxPacketSize)
+	},
+}
 
 const Name = "PROXY"
 
@@ -114,25 +121,28 @@ func (p *Proxy) relayPacketLoop() {
 					}
 					defer outbound.Close()
 					errChan := make(chan error, 2)
-					copyPacket := func(a, b tunnel.PacketConn) {
-						for {
-							buf := make([]byte, MaxPacketSize)
-							n, metadata, err := a.ReadWithMetadata(buf)
-							if err != nil {
-								errChan <- err
-								return
-							}
-							if n == 0 {
-								errChan <- nil
-								return
-							}
-							_, err = b.WriteWithMetadata(buf[:n], metadata)
-							if err != nil {
-								errChan <- err
-								return
-							}
+			copyPacket := func(a, b tunnel.PacketConn) {
+					for {
+						buf := bufPool.Get().([]byte)
+						n, metadata, err := a.ReadWithMetadata(buf)
+						if err != nil {
+							bufPool.Put(buf)
+							errChan <- err
+							return
+						}
+						if n == 0 {
+							bufPool.Put(buf)
+							errChan <- nil
+							return
+						}
+						_, err = b.WriteWithMetadata(buf[:n], metadata)
+						bufPool.Put(buf)
+						if err != nil {
+							errChan <- err
+							return
 						}
 					}
+				}
 					go copyPacket(inbound, outbound)
 					go copyPacket(outbound, inbound)
 					select {

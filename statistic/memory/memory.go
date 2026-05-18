@@ -93,7 +93,8 @@ func (u *User) AddTraffic(sent, recv int) {
 
 	if u.sendLimiter != nil && sent >= 0 {
 		u.sendLimiter.WaitN(u.ctx, sent)
-	} else if u.recvLimiter != nil && recv >= 0 {
+	}
+	if u.recvLimiter != nil && recv >= 0 {
 		u.recvLimiter.WaitN(u.ctx, recv)
 	}
 	atomic.AddUint64(&u.sent, uint64(sent))
@@ -152,6 +153,7 @@ func (u *User) ResetTraffic() (uint64, uint64) {
 
 func (u *User) speedUpdater() {
 	ticker := time.NewTicker(time.Second)
+	defer ticker.Stop()
 	for {
 		select {
 		case <-u.ctx.Done():

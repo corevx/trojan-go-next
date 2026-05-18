@@ -2,6 +2,7 @@ package mux
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/xtaci/smux"
 
@@ -31,6 +32,11 @@ func (s *Server) acceptConnWorker() {
 			continue
 		}
 		go func(conn tunnel.Conn) {
+			defer func() {
+				if r := recover(); r != nil {
+					log.Error(common.NewError("panic in mux acceptConnWorker goroutine").Base(fmt.Errorf("%v", r)))
+				}
+			}()
 			smuxConfig := smux.DefaultConfig()
 			// smuxConfig.KeepAliveDisabled = true
 			smuxSession, err := smux.Server(conn, smuxConfig)
@@ -39,6 +45,11 @@ func (s *Server) acceptConnWorker() {
 				return
 			}
 			go func(session *smux.Session, conn tunnel.Conn) {
+				defer func() {
+					if r := recover(); r != nil {
+						log.Error(common.NewError("panic in mux stream goroutine").Base(fmt.Errorf("%v", r)))
+					}
+				}()
 				defer session.Close()
 				defer conn.Close()
 				for {

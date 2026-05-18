@@ -6,7 +6,7 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"io"
-	"io/ioutil"
+	"os"
 	"strings"
 
 	utls "github.com/refraction-networking/utls"
@@ -118,7 +118,7 @@ func NewClient(ctx context.Context, underlay tunnel.Client) (*Client, error) {
 	}
 
 	if cfg.TLS.CertPath != "" {
-		caCertByte, err := ioutil.ReadFile(cfg.TLS.CertPath)
+		caCertByte, err := os.ReadFile(cfg.TLS.CertPath)
 		if err != nil {
 			return nil, common.NewError("failed to load cert file").Base(err)
 		}

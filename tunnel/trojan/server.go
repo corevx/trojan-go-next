@@ -136,6 +136,11 @@ func (s *Server) acceptLoop() {
 			continue
 		}
 		go func(conn tunnel.Conn) {
+			defer func() {
+				if r := recover(); r != nil {
+					log.Error(common.NewError("panic in trojan acceptLoop goroutine").Base(fmt.Errorf("%v", r)))
+				}
+			}()
 			rewindConn := common.NewRewindConn(conn)
 			rewindConn.SetBufferSize(128)
 			defer rewindConn.StopBuffering()
@@ -160,20 +165,36 @@ func (s *Server) acceptLoop() {
 			switch inboundConn.metadata.Command {
 			case Connect:
 				if inboundConn.metadata.DomainName == "MUX_CONN" {
-					s.muxChan <- inboundConn
+					select {
+					case s.muxChan <- inboundConn:
+					default:
+						log.Warn(common.NewError("mux channel full, dropping connection"))
+					}
 					log.Debug("mux(r) connection")
 				} else {
-					s.connChan <- inboundConn
+					select {
+					case s.connChan <- inboundConn:
+					default:
+						log.Warn(common.NewError("conn channel full, dropping connection"))
+					}
 					log.Debug("normal trojan connection")
 				}
 
 			case Associate:
-				s.packetChan <- &PacketConn{
+				select {
+				case s.packetChan <- &PacketConn{
 					Conn: inboundConn,
+				}:
+				default:
+					log.Warn(common.NewError("packet channel full, dropping connection"))
 				}
 				log.Debug("trojan udp connection")
 			case Mux:
-				s.muxChan <- inboundConn
+				select {
+				case s.muxChan <- inboundConn:
+				default:
+					log.Warn(common.NewError("mux channel full, dropping connection"))
+				}
 				log.Debug("mux connection")
 			default:
 				log.Error(common.NewError(fmt.Sprintf("unknown trojan command %d", inboundConn.metadata.Command)))
