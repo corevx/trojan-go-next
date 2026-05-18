@@ -1,19 +1,24 @@
+name: release-build
+
 on:
   push:
     tags:
       - "v*.*.*"
-name: release-build
+
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - name: Install Go
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v5
         with:
-          go-version: ^1.17.1
+          go-version: "1.22"
 
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Checkout tag
         run: |
@@ -27,11 +32,20 @@ jobs:
         run: |
           make release -j$(nproc)
 
+      - name: Generate Release Notes
+        run: |
+          echo "## What's Changed" > RELEASE_NOTES.md
+          echo "" >> RELEASE_NOTES.md
+          git log --pretty=format:"- %s" HEAD~10..HEAD >> RELEASE_NOTES.md || true
+          echo "" >> RELEASE_NOTES.md
+          echo "**Full Changelog**: https://github.com/${{ github.repository }}/compare/v0.10.6...${{ env.TAG_NAME }}" >> RELEASE_NOTES.md
+
       - name: Release
-        uses: svenstaro/upload-release-action@v2
+        uses: softprops/action-gh-release@v2
         with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          tag: ${{ env.TAG_NAME }}
-          file: ./trojan-go-*.zip
-          file_glob: true
-          prerelease: true
+          tag_name: ${{ env.TAG_NAME }}
+          body_path: RELEASE_NOTES.md
+          files: ./trojan-go-*.zip
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

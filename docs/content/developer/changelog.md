@@ -8,6 +8,8 @@ weight: 50
 
 本次更新基于 p4gefau1t/trojan-go v0.10.6，精选了安全性和稳定性修复。仅修 bug，不加功能，不改架构。
 
+项目现由 [corevx](https://github.com/corevx) 维护，仓库迁移至 [corevx/trojan-go-next](https://github.com/corevx/trojan-go-next)。
+
 ### 重要变更
 
 - Go 版本要求从 **1.14** 提升至 **1.22**

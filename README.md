@@ -4,11 +4,11 @@ A complete Trojan proxy implementation in Go, compatible with the original Troja
 
 Trojan-Go supports [multiplexing](#multiplexing) to improve concurrency performance, a built-in [routing module](#routing) for traffic splitting, [CDN traffic relay](#websocket) via WebSocket over TLS, [secondary encryption](#shadowsocks-aead-encryption) using Shadowsocks AEAD, and pluggable [transport layer plugins](#transport-plugin).
 
-Pre-built binaries are available on the [Release page](https://github.com/p4gefau1t/trojan-go/releases). Just download, extract, and run — no additional dependencies required.
+Pre-built binaries are available on the [Release page](https://github.com/corevx/trojan-go-next/releases). Just download, extract, and run — no additional dependencies required.
 
 For questions, bug reports, or suggestions, join the [Telegram group](https://t.me/trojan_go_chat).
 
-**Full documentation: [Trojan-Go Docs](https://p4gefau1t.github.io/trojan-go)**
+**Full documentation: [Trojan-Go Docs](https://corevx.github.io/trojan-go-next)**
 
 ## Features
 
@@ -80,7 +80,7 @@ Client:
 docker run --name trojan-go -d \
     -v /etc/trojan-go/:/etc/trojan-go \
     --network host \
-    p4gefau1t/trojan-go
+    ghcr.io/corevx/trojan-go-next
 ```
 
 Or with a custom config path:
@@ -89,7 +89,7 @@ Or with a custom config path:
 docker run --name trojan-go -d \
     -v /path/to/host/config:/path/in/container \
     --network host \
-    p4gefau1t/trojan-go \
+    ghcr.io/corevx/trojan-go-next \
     /path/in/container/config.json
 ```
 
@@ -232,7 +232,7 @@ Client:
 > Requires Go >= 1.14
 
 ```shell
-git clone https://github.com/p4gefau1t/trojan-go.git
+git clone https://github.com/corevx/trojan-go-next.git
 cd trojan-go
 make
 make install  # optional: install systemd service
