@@ -3,11 +3,6 @@ version: "2"
 run:
   timeout: 5m
 
-issues:
-  new: true
-  exclude-dirs:
-    - .*\.pb\.go$
-
 linters:
   enable:
     - asciicheck
@@ -33,12 +28,17 @@ linters:
     - stylecheck
     - unparam
     - unused
-
-linters-settings:
-  gci:
-    sections:
-      - standard
-      - default
-      - prefix(github.com/p4gefau1t/trojan-go)
-  goimports:
-    local-prefixes: github.com/p4gefau1t/trojan-go
+  exclusions:
+    generated: strict
+    rules:
+      - path: \.pb\.go$
+    paths:
+      - third_party
+  settings:
+    gci:
+      sections:
+        - standard
+        - default
+        - prefix(github.com/p4gefau1t/trojan-go)
+    goimports:
+      local-prefixes: github.com/p4gefau1t/trojan-go
