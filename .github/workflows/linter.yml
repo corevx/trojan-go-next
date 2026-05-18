@@ -27,6 +27,6 @@ jobs:
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v7
         with:
-          version: v2.1.0
+          version: v2.2.0
           args: --config=.github/linters/.golangci.yml
           only-new-issues: true
