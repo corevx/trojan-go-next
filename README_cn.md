@@ -4,11 +4,11 @@
 
 Trojan-Go 支持[多路复用](#多路复用)提升并发性能；使用[路由模块](#路由模块)实现国内外分流；支持 [CDN 流量中转](#websocket)（基于 WebSocket over TLS）；支持使用 AEAD 对 Trojan 流量进行[二次加密](#aead-加密)（基于 Shadowsocks AEAD）；支持可插拔的[传输层插件](#传输层插件)，允许替换 TLS，使用其他加密隧道传输 Trojan 协议流量。
 
-预编译二进制可执行文件可在 [Release 页面](https://github.com/p4gefau1t/trojan-go/releases)下载。解压后即可直接运行，无其他组件依赖。
+预编译二进制可执行文件可在 [Release 页面](https://github.com/corevx/trojan-go-next/releases)下载。解压后即可直接运行，无其他组件依赖。
 
 如遇到配置和使用问题、发现 bug，或是有更好的想法，欢迎加入 [Telegram 交流反馈群](https://t.me/trojan_go_chat)。
 
-**完整介绍和配置教程，参见 [Trojan-Go 文档](https://p4gefau1t.github.io/trojan-go)。**
+**完整介绍和配置教程，参见 [Trojan-Go 文档](https://corevx.github.io/trojan-go-next)。**
 
 ## 特性
 
@@ -79,7 +79,7 @@ sudo ./trojan-go -server -remote 127.0.0.1:80 -local 0.0.0.0:443 \
 docker run --name trojan-go -d \
     -v /etc/trojan-go/:/etc/trojan-go \
     --network host \
-    p4gefau1t/trojan-go
+    ghcr.io/corevx/trojan-go-next
 ```
 
 或指定配置文件路径：
@@ -88,7 +88,7 @@ docker run --name trojan-go -d \
 docker run --name trojan-go -d \
     -v /path/to/host/config:/path/in/container \
     --network host \
-    p4gefau1t/trojan-go \
+    ghcr.io/corevx/trojan-go-next \
     /path/in/container/config.json
 ```
 
@@ -233,7 +233,7 @@ Trojan-Go 支持可插拔的传输层插件，并兼容 Shadowsocks [SIP003](htt
 > 要求 Go >= 1.14
 
 ```shell
-git clone https://github.com/p4gefau1t/trojan-go.git
+git clone https://github.com/corevx/trojan-go-next.git
 cd trojan-go
 make
 make install  # 可选：安装 systemd 服务
