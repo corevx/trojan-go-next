@@ -49,13 +49,13 @@ jobs:
 
       - name: Build and push docker image
         run: |
-          TAGS="${{ steps.prepare.outputs.docker_image }}:${{ steps.prepare.outputs.version }}"
+          TAG_ARGS="--tag ${{ steps.prepare.outputs.docker_image }}:${{ steps.prepare.outputs.version }}"
           if [[ $GITHUB_REF == refs/tags/* ]]; then
-            TAGS="$TAGS,${{ steps.prepare.outputs.docker_image }}:latest"
+            TAG_ARGS="$TAG_ARGS --tag ${{ steps.prepare.outputs.docker_image }}:latest"
           fi
           docker buildx build --platform ${{ steps.prepare.outputs.docker_platforms }} \
           --output "type=image,push=true" \
-          --tag "$TAGS" \
+          $TAG_ARGS \
           --build-arg VERSION=${{ steps.prepare.outputs.version }} \
           --build-arg COMMIT=${{ steps.prepare.outputs.commit }} \
           --file Dockerfile .
