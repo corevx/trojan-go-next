@@ -5,8 +5,8 @@ run:
 
 issues:
   new: true
-  exclude-files:
-    - \.pb\.go$
+  exclude-dirs:
+    - .*\.pb\.go$
 
 linters:
   enable:
