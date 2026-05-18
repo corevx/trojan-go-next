@@ -29,6 +29,9 @@ CLAUDE.md
 demos/
 .claude/
 
+# Node.js
+node_modules/
+
 # Sensitive files
 *.pem
 *.p12

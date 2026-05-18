@@ -1,19 +1,18 @@
-.PHONY: default clean hugo hugo-build
+.PHONY: default dev build preview install clean
 
-default: hugo
+default: dev
+
+install:
+	npm install
+
+dev: install
+	npm run dev
+
+build: install
+	npm run build
+
+preview: build
+	npm run preview
 
 clean:
-	rm -rf public/
-
-hugo-build: clean hugo-themes
-	hugo --enableGitInfo --source .
-
-hugo:
-	hugo server --disableFastRender --enableGitInfo --watch --source .
-	# hugo server -D
-
-hugo-themes:
-	rm -rf themes
-	mkdir themes
-	git clone --depth=1 https://github.com/llc1123/hugo-theme-techdoc.git themes/hugo-theme-techdoc
-	rm -rf themes/hugo-theme-techdoc/.git
+	rm -rf .vitepress/dist .vitepress/cache

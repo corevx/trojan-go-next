@@ -1,19 +1,17 @@
+name: Deploy Docs to GitHub Pages
+
 on:
   push:
-    branches:
-      - main
+    branches: [main]
     paths:
       - "docs/**"
       - ".github/workflows/gh-pages.yml"
   pull_request:
     types: [opened, synchronize, reopened]
-    branches:
-      - main
+    branches: [main]
     paths:
       - "docs/**"
       - ".github/workflows/gh-pages.yml"
-
-name: github-pages
 
 permissions:
   contents: write
@@ -24,23 +22,24 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: true
           fetch-depth: 0
 
-      - name: Setup Hugo
-        uses: peaceiris/actions-hugo@v2
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
-          hugo-version: "0.83.1"
+          node-version: 22
+          cache: npm
+          cache-dependency-path: docs/package-lock.json
+
+      - name: Install dependencies
+        run: cd docs && npm ci
 
       - name: Build
-        run: |
-          cd docs
-          make hugo-themes
-          hugo
+        run: cd docs && npm run build
 
       - name: Deploy
         if: ${{ github.event_name == 'push' }}
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./docs/public
+          publish_dir: ./docs/.vitepress/dist
