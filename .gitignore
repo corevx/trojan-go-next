@@ -22,3 +22,9 @@ build/
 *.key
 *.dat
 trojan-go
+
+# Dev artifacts
+.tool-versions
+BUGFIX_PLAN.md
+CLAUDE.md
+demos/
