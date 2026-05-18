@@ -243,6 +243,9 @@ func RunServerAPI(ctx context.Context, auth statistic.Authenticator) error {
 	}
 	defer listener.Close()
 	log.Info("server-side api service is listening on", listener.Addr().String())
+	if !cfg.API.SSL.Enabled {
+		log.Warn("grpc API running without TLS - consider enabling ssl for security")
+	}
 	errChan := make(chan error, 1)
 	go func() {
 		errChan <- server.Serve(listener)
