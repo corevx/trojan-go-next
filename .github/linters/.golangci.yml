@@ -1,10 +1,10 @@
 run:
   timeout: 5m
-  skip-files:
-    - \.pb\.go$
 
 issues:
   new: true
+  exclude-files:
+    - \.pb\.go$
 
 linters:
   enable:
@@ -38,6 +38,9 @@ linters:
 
 linters-settings:
   gci:
-    local-prefixes: github.com/p4gefau1t/trojan-go
+    sections:
+      - standard
+      - default
+      - prefix(github.com/p4gefau1t/trojan-go)
   goimports:
     local-prefixes: github.com/p4gefau1t/trojan-go
