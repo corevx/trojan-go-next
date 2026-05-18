@@ -21,22 +21,18 @@ linters:
     - govet
     - ineffassign
     - misspell
-    - typecheck
     - unconvert
     - whitespace
   disable:
-    - deadcode
     - errcheck
     - goprintffuncname
     - gosimple
     - nilerr
     - rowserrcheck
     - staticcheck
-    - structcheck
     - stylecheck
     - unparam
     - unused
-    - varcheck
 
 linters-settings:
   gci:
