@@ -13,7 +13,7 @@ ARG COMMIT=unknown
 RUN GOPROXY=https://goproxy.cn,direct CGO_ENABLED=0 go build \
     -tags "full" -trimpath \
     -ldflags="-s -w -buildid= -X github.com/p4gefau1t/trojan-go/constant.Version=${VERSION} -X github.com/p4gefau1t/trojan-go/constant.Commit=${COMMIT}" \
-    -o build/trojan-go
+    -o build/trojan-go-next
 
 RUN cd build && \
     curl -fsSL -o geosite.dat "https://cdn.jsdelivr.net/gh/v2fly/domain-list-community@release/dlc.dat" && \
@@ -25,10 +25,10 @@ FROM alpine:3.20
 RUN apk add --no-cache tzdata ca-certificates
 
 WORKDIR /etc/trojan-go
-COPY --from=builder /src/build/trojan-go /usr/local/bin/trojan-go
+COPY --from=builder /src/build/trojan-go-next /usr/local/bin/trojan-go-next
 COPY --from=builder /src/build/*.dat /etc/trojan-go/
 
 EXPOSE 443 8443
 
-ENTRYPOINT ["/usr/local/bin/trojan-go", "-config"]
+ENTRYPOINT ["/usr/local/bin/trojan-go-next", "-config"]
 CMD ["/etc/trojan-go/config.json"]

@@ -3,7 +3,7 @@ import { defineConfig } from 'vitepress'
 export default defineConfig({
   title: 'Trojan-Go-Next Docs',
   description: '使用 Go 实现的完整 Trojan 代理，兼容原版协议与配置格式',
-  base: '/trojan-go-next-next/',
+  base: '/trojan-go-next/',
 
   locales: {
     root: {
@@ -15,7 +15,7 @@ export default defineConfig({
         nav: createNavZH(),
         sidebar: createSidebarZH(),
         editLink: {
-          pattern: 'https://github.com/corevx/trojan-go-next-next/edit/main/docs/:path',
+          pattern: 'https://github.com/corevx/trojan-go-next/edit/main/docs/:path',
           text: '在 GitHub 上编辑此页'
         },
         docFooter: { prev: '上一篇', next: '下一篇' },
@@ -37,7 +37,7 @@ export default defineConfig({
         nav: createNavEN(),
         sidebar: createSidebarEN(),
         editLink: {
-          pattern: 'https://github.com/corevx/trojan-go-next-next/edit/main/docs/:path',
+          pattern: 'https://github.com/corevx/trojan-go-next/edit/main/docs/:path',
           text: 'Edit this page on GitHub'
         }
       }
@@ -46,7 +46,7 @@ export default defineConfig({
 
   themeConfig: {
     socialLinks: [
-      { icon: 'github', link: 'https://github.com/corevx/trojan-go-next-next' }
+      { icon: 'github', link: 'https://github.com/corevx/trojan-go-next' }
     ],
     search: {
       provider: 'local'
@@ -171,7 +171,7 @@ function createNavZH() {
         { text: '更新日志', link: '/developer/changelog' }
       ]
     },
-    { text: 'GitHub', link: 'https://github.com/corevx/trojan-go-next-next' }
+    { text: 'GitHub', link: 'https://github.com/corevx/trojan-go-next' }
   ]
 }
 
@@ -212,6 +212,6 @@ function createNavEN() {
         { text: 'Configuration', link: '/en/guide/config' }
       ]
     },
-    { text: 'GitHub', link: 'https://github.com/corevx/trojan-go-next-next' }
+    { text: 'GitHub', link: 'https://github.com/corevx/trojan-go-next' }
   ]
 }

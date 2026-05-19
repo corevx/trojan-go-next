@@ -34,11 +34,16 @@ jobs:
 
       - name: Generate Release Notes
         run: |
+          prev_tag=$(git tag --sort=-version:refname | sed -n '2p')
           echo "## What's Changed" > RELEASE_NOTES.md
           echo "" >> RELEASE_NOTES.md
-          git log --pretty=format:"- %s" HEAD~10..HEAD >> RELEASE_NOTES.md || true
-          echo "" >> RELEASE_NOTES.md
-          echo "**Full Changelog**: https://github.com/${{ github.repository }}/compare/v0.10.6...${{ env.TAG_NAME }}" >> RELEASE_NOTES.md
+          if [ -n "$prev_tag" ]; then
+            git log --pretty=format:"- %s" "${prev_tag}..${{ env.TAG_NAME }}" >> RELEASE_NOTES.md || true
+            echo "" >> RELEASE_NOTES.md
+            echo "**Full Changelog**: https://github.com/${{ github.repository }}/compare/${prev_tag}...${{ env.TAG_NAME }}" >> RELEASE_NOTES.md
+          else
+            git log --pretty=format:"- %s" HEAD~10..HEAD >> RELEASE_NOTES.md || true
+          fi
 
       - name: Release
         uses: softprops/action-gh-release@v2

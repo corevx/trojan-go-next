@@ -8,11 +8,7 @@ linters:
     - asciicheck
     - bodyclose
     - depguard
-    - gci
     - gocritic
-    - gofmt
-    - gofumpt
-    - goimports
     - govet
     - ineffassign
     - misspell
@@ -34,6 +30,13 @@ linters:
       - path: \.pb\.go$
     paths:
       - third_party
+
+formatters:
+  enable:
+    - gci
+    - gofmt
+    - gofumpt
+    - goimports
   settings:
     gci:
       sections:
