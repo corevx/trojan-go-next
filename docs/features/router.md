@@ -6,7 +6,7 @@ title: "路由分流与广告屏蔽"
 
 ## 功能概述
 
-Trojan-Go 内建路由模块，基于 GeoIP 和 GeoSite 数据库实现流量分流。客户端可对每个连接应用三种策略：
+Trojan-Go-Next 内建路由模块，基于 GeoIP 和 GeoSite 数据库实现流量分流。客户端可对每个连接应用三种策略：
 
 | 策略 | 行为 |
 |------|------|
@@ -126,16 +126,16 @@ Trojan-Go 内建路由模块，基于 GeoIP 和 GeoSite 数据库实现流量分
 
 ### 数据文件位置
 
-Trojan-Go 按以下顺序查找数据文件：
+Trojan-Go-Next 按以下顺序查找数据文件：
 
 1. 环境变量 `TROJAN_GO_LOCATION_ASSET` 指定的目录
-2. Trojan-Go 可执行文件所在目录
+2. Trojan-Go-Next 可执行文件所在目录
 
 Release 压缩包已包含这两个文件，解压后直接可用。如需自定义路径：
 
 ```bash
 export TROJAN_GO_LOCATION_ASSET=/path/to/asset/directory
-trojan-go -config config.json
+trojan-go-next -config config.json
 ```
 
 ::: tip
@@ -169,7 +169,7 @@ curl -x socks5://127.0.0.1:1080 -s -w "Proxy: %{time_total}s\n" -o /dev/null htt
 以 debug 模式启动客户端可查看路由决策日志：
 
 ```bash
-trojan-go -config config.json -log debug
+trojan-go-next -config config.json -log debug
 ```
 
 日志中会显示每个连接的路由决策结果（`proxy` / `bypass` / `block`）。

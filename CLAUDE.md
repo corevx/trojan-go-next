@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Trojan-Go is a Go implementation of the Trojan proxy protocol with extensions: WebSocket transport, smux multiplexing, Shadowsocks AEAD encryption, geo-based routing, gRPC API, and TProxy transparent proxy. Compatible with the original Trojan config format.
+Trojan-Go-Next is a Go implementation of the Trojan proxy protocol with extensions: WebSocket transport, smux multiplexing, Shadowsocks AEAD encryption, geo-based routing, gRPC API, and TProxy transparent proxy. Compatible with the original Trojan config format.
 
 ## Build & Test Commands
 

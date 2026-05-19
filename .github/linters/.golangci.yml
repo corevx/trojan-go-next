@@ -39,6 +39,6 @@ linters:
       sections:
         - standard
         - default
-        - prefix(github.com/p4gefau1t/trojan-go)
+        - prefix(github.com/p4gefau1t/trojan-go-next)
     goimports:
-      local-prefixes: github.com/p4gefau1t/trojan-go
+      local-prefixes: github.com/p4gefau1t/trojan-go-next

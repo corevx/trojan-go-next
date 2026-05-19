@@ -31,7 +31,7 @@ assignees: ''
 
 ## 服务端和客户端版本信息
 
-请执行./trojan-go -version并将输出完整粘贴在此处
+请执行./trojan-go-next -version并将输出完整粘贴在此处
 
 ## 其他信息
 

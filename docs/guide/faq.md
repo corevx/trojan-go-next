@@ -15,7 +15,7 @@ title: 常见问题
 1. **检查服务端是否运行**
    ```shell
    # 在服务端执行
-   ps aux | grep trojan-go
+   ps aux | grep trojan-go-next
    ss -tlnp | grep 443
    ```
 
@@ -37,7 +37,7 @@ title: 常见问题
 
 ### 服务端启动报错 "HTTP server is not working"
 
-**原因：** Trojan-Go 会检测 `remote_addr:remote_port` 上的 HTTP 服务是否正常工作。如果 HTTP 服务未启动，Trojan-Go 将拒绝启动。
+**原因：** Trojan-Go-Next 会检测 `remote_addr:remote_port` 上的 HTTP 服务是否正常工作。如果 HTTP 服务未启动，Trojan-Go-Next 将拒绝启动。
 
 **解决方法：**
 - 确保服务器本地 80 端口（或你配置的 `remote_port`）上运行了 HTTP 服务（如 Nginx）
@@ -81,7 +81,7 @@ title: 常见问题
 
 ```shell
 sudo certbot renew
-sudo systemctl restart trojan-go
+sudo systemctl restart trojan-go-next
 ```
 
 推荐设置自动续期（certbot 默认会安装 cron 任务）：
@@ -106,7 +106,7 @@ openssl req -x509 -newkey rsa:4096 -keyout key.pem -out cert.crt \
 
 ### JSON 和 YAML 格式有什么区别
 
-Trojan-Go 同时支持 JSON 和 YAML 两种配置格式，功能完全相同。YAML 格式更易读写：
+Trojan-Go-Next 同时支持 JSON 和 YAML 两种配置格式，功能完全相同。YAML 格式更易读写：
 
 ```yaml
 # YAML 格式
@@ -153,9 +153,9 @@ password:
 
 ## 兼容性
 
-### Trojan-Go 服务端兼容哪些客户端
+### Trojan-Go-Next 服务端兼容哪些客户端
 
-所有支持标准 Trojan 协议的客户端都可以连接 Trojan-Go 服务端，包括：
+所有支持标准 Trojan 协议的客户端都可以连接 Trojan-Go-Next 服务端，包括：
 
 - [v2rayN](https://github.com/2dust/v2rayN)
 - [Clash Verge Rev](https://github.com/clash-verge-rev/clash-verge-rev)
@@ -164,31 +164,31 @@ password:
 - [sing-box](https://github.com/SagerNet/sing-box)
 
 ::: warning
-以上客户端仅支持标准 Trojan 协议。Trojan-Go 扩展特性（WebSocket 传输、多路复用、AEAD 二次加密）需要双方都使用 `trojan-go` 二进制。
+以上客户端仅支持标准 Trojan 协议。Trojan-Go-Next 扩展特性（WebSocket 传输、多路复用、AEAD 二次加密）需要双方都使用 `trojan-go-next` 二进制。
 :::
 
-### Trojan-Go 客户端能连接原版 Trojan 服务端吗
+### Trojan-Go-Next 客户端能连接原版 Trojan 服务端吗
 
-可以。只要不启用 Trojan-Go 的扩展特性（WebSocket、mux、shadowsocks 等），客户端完全兼容原版 Trojan 服务端。
+可以。只要不启用 Trojan-Go-Next 的扩展特性（WebSocket、mux、shadowsocks 等），客户端完全兼容原版 Trojan 服务端。
 
 ## Docker 相关
 
 ### Docker 部署时如何指定配置文件
 
 ```shell
-docker run --name trojan-go -d \
-    -v /etc/trojan-go/:/etc/trojan-go \
+docker run --name trojan-go-next -d \
+    -v /etc/trojan-go-next/:/etc/trojan-go-next \
     --network host \
-    ghcr.io/corevx/trojan-go-next
+    ghcr.io/corevx/trojan-go-next-next
 ```
 
-默认配置文件路径为 `/etc/trojan-go/config.json`。也可以指定其他路径：
+默认配置文件路径为 `/etc/trojan-go-next/config.json`。也可以指定其他路径：
 
 ```shell
-docker run --name trojan-go -d \
+docker run --name trojan-go-next -d \
     -v /my/config/:/config/ \
     --network host \
-    ghcr.io/corevx/trojan-go-next \
+    ghcr.io/corevx/trojan-go-next-next \
     /config/my-server.json
 ```
 
@@ -197,10 +197,10 @@ docker run --name trojan-go -d \
 Docker 镜像已内置 GeoIP / GeoSite 数据文件。如果你需要使用自定义数据文件，将其挂载到容器内即可：
 
 ```shell
-docker run --name trojan-go -d \
-    -v /etc/trojan-go/:/etc/trojan-go \
+docker run --name trojan-go-next -d \
+    -v /etc/trojan-go-next/:/etc/trojan-go-next \
     --network host \
-    ghcr.io/corevx/trojan-go-next
+    ghcr.io/corevx/trojan-go-next-next
 ```
 
 ## 安全相关
@@ -226,23 +226,23 @@ docker run --name trojan-go -d \
 ### 如何查看版本号
 
 ```shell
-./trojan-go -version
+./trojan-go-next -version
 ```
 
 ### 如何查看运行日志
 
 ```shell
 # systemd 服务
-journalctl -u trojan-go -f
+journalctl -u trojan-go-next -f
 
 # Docker
-docker logs -f trojan-go
+docker logs -f trojan-go-next
 ```
 
 ### GeoIP/GeoSite 数据文件在哪里下载
 
-Trojan-Go 使用 V2Fly 的数据文件：
+Trojan-Go-Next 使用 V2Fly 的数据文件：
 - [GeoIP](https://github.com/v2fly/geoip)
 - [GeoSite (domain-list-community)](https://github.com/v2fly/domain-list-community)
 
-如果使用路由分流功能，需要将 `.dat` 文件放在 Trojan-Go 二进制同目录下，或设置 `TROJAN_GO_LOCATION_ASSET` 环境变量。
+如果使用路由分流功能，需要将 `.dat` 文件放在 Trojan-Go-Next 二进制同目录下，或设置 `TROJAN_GO_LOCATION_ASSET` 环境变量。

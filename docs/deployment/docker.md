@@ -4,26 +4,26 @@ title: Docker 容器部署
 
 # Docker 容器部署
 
-Trojan-Go 提供官方 Docker 镜像，支持一键部署。
+Trojan-Go-Next 提供官方 Docker 镜像，支持一键部署。
 
 ## 快速启动
 
 ```shell
-docker run --name trojan-go -d \
-    -v /etc/trojan-go/:/etc/trojan-go \
+docker run --name trojan-go-next -d \
+    -v /etc/trojan-go-next/:/etc/trojan-go-next \
     --network host \
-    ghcr.io/corevx/trojan-go-next
+    ghcr.io/corevx/trojan-go-next-next
 ```
 
-默认读取 `/etc/trojan-go/config.json`。
+默认读取 `/etc/trojan-go-next/config.json`。
 
 ## 指定配置文件
 
 ```shell
-docker run --name trojan-go -d \
+docker run --name trojan-go-next -d \
     -v /path/to/host/config:/path/in/container \
     --network host \
-    ghcr.io/corevx/trojan-go-next \
+    ghcr.io/corevx/trojan-go-next-next \
     /path/in/container/config.json
 ```
 
@@ -33,14 +33,14 @@ docker run --name trojan-go -d \
 
 ```yaml
 services:
-  trojan-go:
-    image: ghcr.io/corevx/trojan-go-next
-    container_name: trojan-go
+  trojan-go-next:
+    image: ghcr.io/corevx/trojan-go-next-next
+    container_name: trojan-go-next
     restart: unless-stopped
     network_mode: host
     volumes:
-      - ./config.json:/etc/trojan-go/config.json
-      - ./certs:/etc/trojan-go/certs:ro
+      - ./config.json:/etc/trojan-go-next/config.json
+      - ./certs:/etc/trojan-go-next/certs:ro
     environment:
       - TZ=Asia/Shanghai
 ```
@@ -55,10 +55,10 @@ docker compose up -d
 
 ```shell
 # 查看日志
-docker logs -f trojan-go
+docker logs -f trojan-go-next
 
 # 重启
-docker restart trojan-go
+docker restart trojan-go-next
 
 # 停止
 docker compose down
@@ -74,9 +74,9 @@ docker compose up -d
 
 ```yaml
 volumes:
-  - ./config.json:/etc/trojan-go/config.json
-  - /etc/letsencrypt/live/example.com/fullchain.pem:/etc/trojan-go/certs/cert.pem:ro
-  - /etc/letsencrypt/live/example.com/privkey.pem:/etc/trojan-go/certs/key.pem:ro
+  - ./config.json:/etc/trojan-go-next/config.json
+  - /etc/letsencrypt/live/example.com/fullchain.pem:/etc/trojan-go-next/certs/cert.pem:ro
+  - /etc/letsencrypt/live/example.com/privkey.pem:/etc/trojan-go-next/certs/key.pem:ro
 ```
 
 配置文件中对应路径：
@@ -84,15 +84,15 @@ volumes:
 ```json
 {
     "ssl": {
-        "cert": "/etc/trojan-go/certs/cert.pem",
-        "key": "/etc/trojan-go/certs/key.pem"
+        "cert": "/etc/trojan-go-next/certs/cert.pem",
+        "key": "/etc/trojan-go-next/certs/key.pem"
     }
 }
 ```
 
 ## 注意事项
 
-- **必须使用 `--network host`**：Trojan-Go 需要监听 443 端口，使用 host 网络模式可以避免 NAT 和端口映射问题
+- **必须使用 `--network host`**：Trojan-Go-Next 需要监听 443 端口，使用 host 网络模式可以避免 NAT 和端口映射问题
 - **镜像内置 GeoIP/GeoSite 数据**：无需额外挂载
 - **权限问题**：如果绑定 443 端口需要 root 权限，确保 Docker 有 `CAP_NET_BIND_SERVICE` 能力
 - **时区**：通过 `TZ` 环境变量设置时区，影响日志时间戳

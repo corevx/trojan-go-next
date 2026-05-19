@@ -4,7 +4,7 @@ title: systemd 服务部署
 
 # systemd 服务部署
 
-将 Trojan-Go 配置为 systemd 服务，实现开机自启和故障自动重启。
+将 Trojan-Go-Next 配置为 systemd 服务，实现开机自启和故障自动重启。
 
 ## 方法一：make install（推荐）
 
@@ -19,31 +19,31 @@ sudo make install
 
 | 操作 | 目标路径 |
 |------|----------|
-| 安装二进制 | `/usr/bin/trojan-go` |
-| 复制示例配置 | `/etc/trojan-go/` |
+| 安装二进制 | `/usr/bin/trojan-go-next` |
+| 复制示例配置 | `/etc/trojan-go-next/` |
 | 安装 systemd 服务 | `/usr/lib/systemd/system/` |
-| 下载 GeoIP/GeoSite 数据 | `/usr/share/trojan-go/` |
+| 下载 GeoIP/GeoSite 数据 | `/usr/share/trojan-go-next/` |
 
 ## 方法二：手动配置
 
 ### 1. 安装二进制
 
 ```shell
-sudo cp trojan-go /usr/bin/trojan-go
+sudo cp trojan-go-next /usr/bin/trojan-go-next
 ```
 
 ### 2. 创建配置文件
 
-将你的配置文件放到 `/etc/trojan-go/config.json`。
+将你的配置文件放到 `/etc/trojan-go-next/config.json`。
 
 ### 3. 创建服务文件
 
-创建 `/usr/lib/systemd/system/trojan-go.service`：
+创建 `/usr/lib/systemd/system/trojan-go-next.service`：
 
 ```ini
 [Unit]
-Description=Trojan-Go
-Documentation=https://corevx.github.io/trojan-go-next/
+Description=Trojan-Go-Next
+Documentation=https://corevx.github.io/trojan-go-next-next/
 After=network.target nss-lookup.target
 
 [Service]
@@ -51,7 +51,7 @@ User=nobody
 CapabilityBoundingSet=CAP_NET_ADMIN CAP_NET_BIND_SERVICE
 AmbientCapabilities=CAP_NET_ADMIN CAP_NET_BIND_SERVICE
 NoNewPrivileges=true
-ExecStart=/usr/bin/trojan-go -config /etc/trojan-go/config.json
+ExecStart=/usr/bin/trojan-go-next -config /etc/trojan-go-next/config.json
 Restart=on-failure
 RestartSec=10s
 LimitNOFILE=infinity
@@ -64,38 +64,38 @@ WantedBy=multi-user.target
 
 ```shell
 sudo systemctl daemon-reload
-sudo systemctl enable trojan-go    # 开机自启
-sudo systemctl start trojan-go     # 立即启动
+sudo systemctl enable trojan-go-next    # 开机自启
+sudo systemctl start trojan-go-next     # 立即启动
 ```
 
 ## 常用操作
 
 ```shell
 # 查看运行状态
-sudo systemctl status trojan-go
+sudo systemctl status trojan-go-next
 
 # 查看实时日志
-journalctl -u trojan-go -f
+journalctl -u trojan-go-next -f
 
 # 重启服务（修改配置后）
-sudo systemctl restart trojan-go
+sudo systemctl restart trojan-go-next
 
 # 停止服务
-sudo systemctl stop trojan-go
+sudo systemctl stop trojan-go-next
 
 # 取消开机自启
-sudo systemctl disable trojan-go
+sudo systemctl disable trojan-go-next
 ```
 
 ## 多实例部署
 
-如果你需要同时运行多个 Trojan-Go 实例（不同配置），可以使用模板服务文件。
+如果你需要同时运行多个 Trojan-Go-Next 实例（不同配置），可以使用模板服务文件。
 
-创建 `/usr/lib/systemd/system/trojan-go@.service`：
+创建 `/usr/lib/systemd/system/trojan-go-next@.service`：
 
 ```ini
 [Unit]
-Description=Trojan-Go (%i)
+Description=Trojan-Go-Next (%i)
 After=network.target nss-lookup.target
 
 [Service]
@@ -103,7 +103,7 @@ User=nobody
 CapabilityBoundingSet=CAP_NET_ADMIN CAP_NET_BIND_SERVICE
 AmbientCapabilities=CAP_NET_ADMIN CAP_NET_BIND_SERVICE
 NoNewPrivileges=true
-ExecStart=/usr/bin/trojan-go -config /etc/trojan-go/%i.json
+ExecStart=/usr/bin/trojan-go-next -config /etc/trojan-go-next/%i.json
 Restart=on-failure
 RestartSec=10s
 LimitNOFILE=infinity
@@ -115,14 +115,14 @@ WantedBy=multi-user.target
 使用方法：
 
 ```shell
-# 将配置文件放到 /etc/trojan-go/ 下
-# 例如 /etc/trojan-go/ws.json、/etc/trojan-go/direct.json
+# 将配置文件放到 /etc/trojan-go-next/ 下
+# 例如 /etc/trojan-go-next/ws.json、/etc/trojan-go-next/direct.json
 
-sudo systemctl enable trojan-go@ws
-sudo systemctl start trojan-go@ws
+sudo systemctl enable trojan-go-next@ws
+sudo systemctl start trojan-go-next@ws
 
-sudo systemctl enable trojan-go@direct
-sudo systemctl start trojan-go@direct
+sudo systemctl enable trojan-go-next@direct
+sudo systemctl start trojan-go-next@direct
 ```
 
 ## 安全加固说明
@@ -149,16 +149,16 @@ sudo certbot renew --dry-run
 systemctl list-timers | grep certbot
 
 # 如果需要手动添加续期后的重启钩子
-# 编辑 /etc/letsencrypt/renewal-hooks/post/restart-trojan-go.sh
+# 编辑 /etc/letsencrypt/renewal-hooks/post/restart-trojan-go-next.sh
 ```
 
-创建 `/etc/letsencrypt/renewal-hooks/post/restart-trojan-go.sh`：
+创建 `/etc/letsencrypt/renewal-hooks/post/restart-trojan-go-next.sh`：
 
 ```shell
 #!/bin/bash
-systemctl restart trojan-go
+systemctl restart trojan-go-next
 ```
 
 ```shell
-sudo chmod +x /etc/letsencrypt/renewal-hooks/post/restart-trojan-go.sh
+sudo chmod +x /etc/letsencrypt/renewal-hooks/post/restart-trojan-go-next.sh
 ```

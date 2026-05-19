@@ -4,7 +4,7 @@ title: TLS 证书管理
 
 # TLS 证书管理
 
-Trojan-Go 依赖 TLS 加密传输。本文介绍证书的申请、配置和续期。
+Trojan-Go-Next 依赖 TLS 加密传输。本文介绍证书的申请、配置和续期。
 
 ## 证书类型对比
 
@@ -42,7 +42,7 @@ sudo certbot certonly --standalone -d example.com
 └── chain.pem        → 证书链（一般不需要直接使用）
 ```
 
-### 配置 Trojan-Go
+### 配置 Trojan-Go-Next
 
 ```json
 {
@@ -65,20 +65,20 @@ systemctl list-timers | grep certbot
 sudo certbot renew --dry-run
 ```
 
-配置续期后自动重启 Trojan-Go，创建 `/etc/letsencrypt/renewal-hooks/post/restart-trojan-go.sh`：
+配置续期后自动重启 Trojan-Go-Next，创建 `/etc/letsencrypt/renewal-hooks/post/restart-trojan-go-next.sh`：
 
 ```shell
 #!/bin/bash
-systemctl restart trojan-go
+systemctl restart trojan-go-next
 ```
 
 ```shell
-sudo chmod +x /etc/letsencrypt/renewal-hooks/post/restart-trojan-go.sh
+sudo chmod +x /etc/letsencrypt/renewal-hooks/post/restart-trojan-go-next.sh
 ```
 
 ## 使用 DNS 验证申请证书
 
-如果你的服务器 80 端口被 Trojan-Go 或其他服务占用，可以使用 DNS 验证：
+如果你的服务器 80 端口被 Trojan-Go-Next 或其他服务占用，可以使用 DNS 验证：
 
 ```shell
 # 以 Cloudflare DNS 插件为例
@@ -115,7 +115,7 @@ openssl req -x509 -newkey rsa:4096 \
 
 ## 证书热重载
 
-Trojan-Go 支持证书热重载，无需重启服务：
+Trojan-Go-Next 支持证书热重载，无需重启服务：
 
 ```json
 {
@@ -131,7 +131,7 @@ Trojan-Go 支持证书热重载，无需重启服务：
 
 ## 证书到期告警 (v0.11.0)
 
-Trojan-Go v0.11.0 新增证书有效期检测：
+Trojan-Go-Next v0.11.0 新增证书有效期检测：
 
 - 自动检测证书到期时间
 - 证书即将过期时在日志中输出告警

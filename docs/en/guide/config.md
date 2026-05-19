@@ -4,7 +4,7 @@ title: Configuration
 
 # Configuration Guide
 
-Trojan-Go supports both JSON and YAML configuration formats. They are functionally identical.
+Trojan-Go-Next supports both JSON and YAML configuration formats. They are functionally identical.
 
 ## Configuration Structure
 
@@ -41,7 +41,7 @@ A complete configuration file consists of these sections:
 
 ### Key Fields
 
-- **`remote_addr` / `remote_port`**: The local HTTP server address. Trojan-Go forwards non-Trojan traffic here. Must be running, or Trojan-Go will refuse to start.
+- **`remote_addr` / `remote_port`**: The local HTTP server address. Trojan-Go-Next forwards non-Trojan traffic here. Must be running, or Trojan-Go-Next will refuse to start.
 - **`ssl.fallback_port`**: (Optional) Port for non-TLS connections. Recommended to return a "400 Bad Request" page.
 
 ## Minimal Client Config

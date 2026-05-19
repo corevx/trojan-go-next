@@ -4,9 +4,9 @@ title: Features
 
 # Features
 
-Trojan-Go extends the original Trojan protocol with several powerful features.
+Trojan-Go-Next extends the original Trojan protocol with several powerful features.
 
-> **Note:** Using any of these extensions will break compatibility with the original Trojan. Both server and client must run Trojan-Go.
+> **Note:** Using any of these extensions will break compatibility with the original Trojan. Both server and client must run Trojan-Go-Next.
 
 ## Overview
 
@@ -21,7 +21,7 @@ Trojan-Go extends the original Trojan protocol with several powerful features.
 | [Transparent Proxy](/features/nat) | TProxy-based transparent proxy (Linux), iptables/nftables | 中文 |
 | [SNI Relay](/features/nginx-relay) | Nginx SNI-based multi-path relay | 中文 |
 | [Custom Protocol Stack](/features/custom-stack) | User-defined tunnel stack composition | 中文 |
-| [URL Share Links](/features/url-scheme) | `trojan-go://` URL scheme for quick config import | 中文 |
+| [URL Share Links](/features/url-scheme) | `trojan-go-next://` URL scheme for quick config import | 中文 |
 | [REST API](/management/rest-api) | HTTP REST API for user management (v0.11.0) | 中文 |
 | [Monitoring](/management/monitor) | Health checks and Prometheus metrics (v0.11.0) | 中文 |
 | [Prometheus Metrics](/management/metrics) | Metrics output with Grafana integration | 中文 |

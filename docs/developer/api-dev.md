@@ -4,7 +4,7 @@ title: "API 开发"
 
 # API 开发
 
-Trojan-Go 通过 gRPC + Protobuf 提供 API 服务，支持流量统计、用户管理和速度限制等功能。API 定义位于 `api/service/api.proto`。
+Trojan-Go-Next 通过 gRPC + Protobuf 提供 API 服务，支持流量统计、用户管理和速度限制等功能。API 定义位于 `api/service/api.proto`。
 
 ## API 概览
 
@@ -15,7 +15,7 @@ Trojan-Go 通过 gRPC + Protobuf 提供 API 服务，支持流量统计、用户
 
 API 模块还包含以下辅助组件（同样需要 `api` 标签）：
 
-- `api/control` — 命令行管理工具（`trojan-go -api ...`）
+- `api/control` — 命令行管理工具（`trojan-go-next -api ...`）
 - `api/monitor` — Prometheus 监控指标
 - `api/rest` — REST API 网关
 
@@ -246,20 +246,20 @@ grpcurl -plaintext 127.0.0.1:10000 describe trojan.api.UserStatus
 
 ## 使用内置命令行工具
 
-Trojan-Go 编译时包含 `api` 标签后，自带命令行管理工具：
+Trojan-Go-Next 编译时包含 `api` 标签后，自带命令行管理工具：
 
 ```bash
 # 列出所有用户
-trojan-go -api -addr 127.0.0.1:10000 -list
+trojan-go-next -api -addr 127.0.0.1:10000 -list
 
 # 添加用户
-trojan-go -api -addr 127.0.0.1:10000 -add -password "newpassword"
+trojan-go-next -api -addr 127.0.0.1:10000 -add -password "newpassword"
 
 # 删除用户
-trojan-go -api -addr 127.0.0.1:10000 -delete -password "oldpassword"
+trojan-go-next -api -addr 127.0.0.1:10000 -delete -password "oldpassword"
 
 # 修改用户限速（1 MB/s 上传 + 下载，最多 3 个 IP）
-trojan-go -api -addr 127.0.0.1:10000 \
+trojan-go-next -api -addr 127.0.0.1:10000 \
   -modify \
   -password "userpass" \
   -upload-speed-limit 1048576 \

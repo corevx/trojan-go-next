@@ -5,7 +5,7 @@ title: "透明代理"
 # 透明代理
 
 ::: warning
-Trojan 原版不完全支持此特性（UDP 部分有差异）。此功能为 Trojan-Go 扩展。
+Trojan 原版不完全支持此特性（UDP 部分有差异）。此功能为 Trojan-Go-Next 扩展。
 :::
 
 ## 功能概述
@@ -33,7 +33,7 @@ NAT 模式基于 Linux 内核的 TProxy（Transparent Proxy）机制实现透明
 
 ## 配置方法
 
-### Trojan-Go 配置
+### Trojan-Go-Next 配置
 
 将一份正确的客户端配置中的 `run_type` 修改为 `"nat"`，并按需调整 `local_port`：
 
@@ -54,7 +54,7 @@ NAT 模式基于 Linux 内核的 TProxy（Transparent Proxy）机制实现透明
 
 ### iptables 规则（TCP + UDP）
 
-假设网关有两个网卡：`$INTERFACE`（局域网网卡）和另一块连接互联网的网卡。以下规则将局域网网卡进入的流量转交给 Trojan-Go：
+假设网关有两个网卡：`$INTERFACE`（局域网网卡）和另一块连接互联网的网卡。以下规则将局域网网卡进入的流量转交给 Trojan-Go-Next：
 
 ```bash
 #!/bin/bash
@@ -67,7 +67,7 @@ INTERFACE="eth0"
 # 新建 TROJAN_GO 链
 iptables -t mangle -N TROJAN_GO
 
-# 绕过 Trojan-Go 服务器地址（避免回环）
+# 绕过 Trojan-Go-Next 服务器地址（避免回环）
 iptables -t mangle -A TROJAN_GO -d $SERVER_IP -j RETURN
 
 # 绕过保留/私有地址
@@ -159,16 +159,16 @@ ip rule add fwmark 1 lookup 100
 
 推荐方案：
 
-1. 在 iptables 中增加 DNS 劫持规则，将发往 `53` 端口的 UDP 流量也转发给 Trojan-Go
+1. 在 iptables 中增加 DNS 劫持规则，将发往 `53` 端口的 UDP 流量也转发给 Trojan-Go-Next
 2. 配合 FORWARD 模式，在网关本地搭建无污染 DNS（参考 [隧道与反向代理](./forward)）
 3. 在网关上运行 dnsmasq，将 DNS 上游指向本地 FORWARD 端口
 
 ## 启动
 
-配置完成后，**以 root 权限启动** Trojan-Go：
+配置完成后，**以 root 权限启动** Trojan-Go-Next：
 
 ```bash
-sudo trojan-go -config config.json
+sudo trojan-go-next -config config.json
 ```
 
 TProxy 需要 root 权限才能监听和操作网络数据包。
@@ -194,18 +194,18 @@ echo "xt_TPROXY" | sudo tee /etc/modules-load.d/tproxy.conf
 
 ### 权限不足
 
-**现象**：Trojan-Go 启动后无法绑定 TProxy 端口。
+**现象**：Trojan-Go-Next 启动后无法绑定 TProxy 端口。
 
 **解决方法**：确保使用 root 权限启动：
 
 ```bash
-sudo trojan-go -config config.json
+sudo trojan-go-next -config config.json
 ```
 
 或为二进制文件授予网络能力（不推荐，存在安全风险）：
 
 ```bash
-sudo setcap cap_net_admin,cap_net_bind_service+ep /usr/bin/trojan-go
+sudo setcap cap_net_admin,cap_net_bind_service+ep /usr/bin/trojan-go-next
 ```
 
 ### 连接回环
@@ -227,6 +227,6 @@ ip route list table 100
 # 3. 从局域网设备测试连通性
 curl -v https://www.google.com
 
-# 4. 检查 Trojan-Go 日志中是否有连接记录
+# 4. 检查 Trojan-Go-Next 日志中是否有连接记录
 # 日志级别设为 0 (Debug) 或 1 (Info) 可以看到详细连接信息
 ```

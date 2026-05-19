@@ -61,5 +61,5 @@ jobs:
 
       - name: Test docker image
         run: |
-          docker run --rm --entrypoint /usr/local/bin/trojan-go \
+          docker run --rm --entrypoint /usr/local/bin/trojan-go-next \
             ghcr.io/${{ github.repository }}:nightly -version

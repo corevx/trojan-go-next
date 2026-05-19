@@ -2,7 +2,7 @@
 layout: home
 
 hero:
-  name: Trojan-Go
+  name: Trojan-Go-Next
   text: Secure, Efficient, Easy-to-Use Trojan Proxy
   tagline: A complete Trojan proxy implementation in Go, compatible with the original Trojan protocol and configuration format
   actions:
@@ -14,7 +14,7 @@ hero:
       link: /en/guide/config
     - theme: alt
       text: GitHub
-      link: https://github.com/corevx/trojan-go-next
+      link: https://github.com/corevx/trojan-go-next-next
 
 features:
   - icon: 🔒
@@ -48,29 +48,29 @@ features:
 ### Server
 
 ```shell
-sudo ./trojan-go -server -remote 127.0.0.1:80 -local 0.0.0.0:443 \
+sudo ./trojan-go-next -server -remote 127.0.0.1:80 -local 0.0.0.0:443 \
     -key ./your_key.key -cert ./your_cert.crt -password your_password
 ```
 
 ### Client
 
 ```shell
-./trojan-go -client -remote example.com:443 -local 127.0.0.1:1080 \
+./trojan-go-next -client -remote example.com:443 -local 127.0.0.1:1080 \
     -password your_password
 ```
 
 ### Docker
 
 ```shell
-docker run --name trojan-go -d \
-    -v /etc/trojan-go/:/etc/trojan-go \
+docker run --name trojan-go-next -d \
+    -v /etc/trojan-go-next/:/etc/trojan-go-next \
     --network host \
-    ghcr.io/corevx/trojan-go-next
+    ghcr.io/corevx/trojan-go-next-next
 ```
 
 ## Compatible Clients
 
-Trojan-Go server is compatible with all clients that support the standard Trojan protocol:
+Trojan-Go-Next server is compatible with all clients that support the standard Trojan protocol:
 
 - [v2rayN](https://github.com/2dust/v2rayN) — Windows / macOS / Linux
 - [Clash Verge Rev](https://github.com/clash-verge-rev/clash-verge-rev) — Cross-platform
@@ -78,7 +78,7 @@ Trojan-Go server is compatible with all clients that support the standard Trojan
 - [ShadowRocket](https://apps.apple.com/app/shadowrocket/id932747118) — iOS
 - [sing-box](https://github.com/SagerNet/sing-box) — Universal proxy platform
 
-> **Note:** The clients above support the standard Trojan protocol. Trojan-Go extensions (WebSocket, multiplexing, AEAD) require running the `trojan-go` binary directly.
+> **Note:** The clients above support the standard Trojan protocol. Trojan-Go-Next extensions (WebSocket, multiplexing, AEAD) require running the `trojan-go-next` binary directly.
 
 ## Community
 

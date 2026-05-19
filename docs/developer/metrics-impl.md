@@ -2,7 +2,7 @@
 title: "指标系统（v0.11.0 新增）"
 ---
 
-Trojan-Go v0.11.0 引入了轻量级的指标采集系统，基于 `sync/atomic` 实现，零外部依赖。
+Trojan-Go-Next v0.11.0 引入了轻量级的指标采集系统，基于 `sync/atomic` 实现，零外部依赖。
 
 ## 指标类型
 
@@ -11,7 +11,7 @@ Trojan-Go v0.11.0 引入了轻量级的指标采集系统，基于 `sync/atomic`
 单调递增的计数器，用于统计连接总数、错误总数等：
 
 ```go
-import "github.com/p4gefau1t/trojan-go/metric"
+import "github.com/p4gefau1t/trojan-go-next/metric"
 
 connTotal := metric.RegisterCounter(
     "trojan_connections_total",
@@ -82,7 +82,7 @@ h := reg.Histogram("my_hist")
 ```go
 import (
     "net/http"
-    "github.com/p4gefau1t/trojan-go/metric"
+    "github.com/p4gefau1t/trojan-go-next/metric"
 )
 
 http.HandleFunc("/metrics", func(w http.ResponseWriter, r *http.Request) {
@@ -116,7 +116,7 @@ trojan_connection_duration_seconds_count 1584
 
 ## 内置指标
 
-Trojan-Go 内部注册了以下指标：
+Trojan-Go-Next 内部注册了以下指标：
 
 | 名称 | 类型 | 位置 |
 |------|------|------|

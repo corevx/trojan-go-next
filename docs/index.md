@@ -2,7 +2,7 @@
 layout: home
 
 hero:
-  name: Trojan-Go
+  name: Trojan-Go-Next
   text: 安全、高效、易用的 Trojan 代理
   tagline: 使用 Go 实现的完整 Trojan 代理，兼容原版 Trojan 协议与配置文件格式
   actions:
@@ -14,7 +14,7 @@ hero:
       link: /guide/config
     - theme: alt
       text: GitHub
-      link: https://github.com/corevx/trojan-go-next
+      link: https://github.com/corevx/trojan-go-next-next
 
 features:
   - icon: 🔒
@@ -45,7 +45,7 @@ features:
 
 ## 与其他代理工具对比
 
-| 特性 | Trojan-Go | 原版 Trojan | V2Ray / Xray | Clash | sing-box |
+| 特性 | Trojan-Go-Next | 原版 Trojan | V2Ray / Xray | Clash | sing-box |
 |------|:---------:|:-----------:|:------------:|:-----:|:--------:|
 | Trojan 协议 | ✅ 兼容原版 | ✅ | ✅ | ✅ | ✅ |
 | WebSocket CDN 中转 | ✅ | ❌ | ✅ | ✅ | ✅ |
@@ -67,29 +67,29 @@ features:
 ### 服务端
 
 ```shell
-sudo ./trojan-go -server -remote 127.0.0.1:80 -local 0.0.0.0:443 \
+sudo ./trojan-go-next -server -remote 127.0.0.1:80 -local 0.0.0.0:443 \
     -key ./your_key.key -cert ./your_cert.crt -password your_password
 ```
 
 ### 客户端
 
 ```shell
-./trojan-go -client -remote example.com:443 -local 127.0.0.1:1080 \
+./trojan-go-next -client -remote example.com:443 -local 127.0.0.1:1080 \
     -password your_password
 ```
 
 ### Docker 部署
 
 ```shell
-docker run --name trojan-go -d \
-    -v /etc/trojan-go/:/etc/trojan-go \
+docker run --name trojan-go-next -d \
+    -v /etc/trojan-go-next/:/etc/trojan-go-next \
     --network host \
-    ghcr.io/corevx/trojan-go-next
+    ghcr.io/corevx/trojan-go-next-next
 ```
 
 ## 兼容的客户端
 
-Trojan-Go 服务端兼容所有支持标准 Trojan 协议的客户端：
+Trojan-Go-Next 服务端兼容所有支持标准 Trojan 协议的客户端：
 
 - [v2rayN](https://github.com/2dust/v2rayN) — Windows / macOS / Linux
 - [Clash Verge Rev](https://github.com/clash-verge-rev/clash-verge-rev) — 跨平台
@@ -97,7 +97,7 @@ Trojan-Go 服务端兼容所有支持标准 Trojan 协议的客户端：
 - [ShadowRocket](https://apps.apple.com/app/shadowrocket/id932747118) — iOS
 - [sing-box](https://github.com/SagerNet/sing-box) — 通用代理平台
 
-> **注意：** 以上客户端支持标准 Trojan 协议。Trojan-Go 扩展特性（WebSocket、多路复用、AEAD）需要直接运行 `trojan-go` 二进制文件。
+> **注意：** 以上客户端支持标准 Trojan 协议。Trojan-Go-Next 扩展特性（WebSocket、多路复用、AEAD）需要直接运行 `trojan-go-next` 二进制文件。
 
 ## 社区
 

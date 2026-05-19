@@ -45,7 +45,7 @@ jobs:
         with:
           tag_name: ${{ env.TAG_NAME }}
           body_path: RELEASE_NOTES.md
-          files: ./trojan-go-*.zip
+          files: ./trojan-go-next-*.zip
           prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

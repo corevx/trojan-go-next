@@ -2,7 +2,7 @@
 title: "REST API（v0.11.0 新增）"
 ---
 
-Trojan-Go v0.11.0 新增了基于 HTTP 的 REST API，作为 gRPC API 的补充，提供更简洁的用户管理接口。
+Trojan-Go-Next v0.11.0 新增了基于 HTTP 的 REST API，作为 gRPC API 的补充，提供更简洁的用户管理接口。
 
 ## 配置
 

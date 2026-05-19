@@ -8,15 +8,15 @@ title: "URL方案（草案）"
 
 ## 概述
 
-感谢 @DuckSoft @StudentMain @phlinhng 对 Trojan-Go URL 方案的讨论和贡献。**目前 URL 方案为草案，需要更多的实践和讨论。**
+感谢 @DuckSoft @StudentMain @phlinhng 对 Trojan-Go-Next URL 方案的讨论和贡献。**目前 URL 方案为草案，需要更多的实践和讨论。**
 
-Trojan-Go**客户端**可以接受URL，以定位服务器资源。原则如下:
+Trojan-Go-Next**客户端**可以接受URL，以定位服务器资源。原则如下:
 
 - 遵守 URL 格式规范
 
 - 保证人类可读，对机器友好
 
-- URL 的作用，是定位 Trojan-Go 节点资源，方便资源分享
+- URL 的作用，是定位 Trojan-Go-Next 节点资源，方便资源分享
 
 需要注意，基于人类可读性的考虑，禁止将 base64 等编码数据嵌入 URL 中。首先， base64 编码不能保证传输安全，其意义在于在 ASCII 信道传输非 ASCII 数据。其次，如果需要保证分享 URL 时的传输安全，请对明文 URL 进行加密，而不是修改 URL 格式。
 
@@ -25,7 +25,7 @@ Trojan-Go**客户端**可以接受URL，以定位服务器资源。原则如下:
 基本格式如下，`$()` 代表此处需要 `encodeURIComponent`。
 
 ```text
-trojan-go://
+trojan-go-next://
     $(trojan-password)
     @
     trojan-host
@@ -44,10 +44,10 @@ trojan-go://
 例如
 
 ```text
-trojan-go://password1234@google.com/?sni=microsoft.com&type=ws&host=youtube.com&path=%2Fgo&encryption=ss%3Baes-256-gcm%3Afuckgfw
+trojan-go-next://password1234@google.com/?sni=microsoft.com&type=ws&host=youtube.com&path=%2Fgo&encryption=ss%3Baes-256-gcm%3Afuckgfw
 ```
 
-由于 Trojan-Go 兼容 Trojan，所以对于 Trojan 的 URL 方案
+由于 Trojan-Go-Next 兼容 Trojan，所以对于 Trojan 的 URL 方案
 
 ```text
 trojan://password@remote_host:remote_port
@@ -56,10 +56,10 @@ trojan://password@remote_host:remote_port
 可以兼容接受。它等价于
 
 ```text
-trojan-go://password@remote_host:remote_port
+trojan-go-next://password@remote_host:remote_port
 ```
 
-需要注意的是，一旦服务器使用了非Trojan兼容的功能，必须使用```trojan-go://```定位服务器。这样设计的目的是使得 Trojan-Go 的 URL 不会被 Trojan 错误接受，避免污染 Trojan 用户的 URL 分享。同时，Trojan-Go 确保可以兼容接受 Trojan 的 URL。
+需要注意的是，一旦服务器使用了非Trojan兼容的功能，必须使用```trojan-go-next://```定位服务器。这样设计的目的是使得 Trojan-Go-Next 的 URL 不会被 Trojan 错误接受，避免污染 Trojan 用户的 URL 分享。同时，Trojan-Go-Next 确保可以兼容接受 Trojan 的 URL。
 
 ## 详述
 

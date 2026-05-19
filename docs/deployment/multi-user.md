@@ -4,7 +4,7 @@ title: 多用户管理
 
 # 多用户管理
 
-Trojan-Go 支持多种用户管理方式，从简单的配置文件到完整的 API 管理。
+Trojan-Go-Next 支持多种用户管理方式，从简单的配置文件到完整的 API 管理。
 
 ## 方式一：配置文件多密码
 
@@ -78,7 +78,7 @@ VALUES ('alice', 'sha224_hash_here', 10737418240);
 
 ### 管理用户
 
-- **添加用户**：插入新记录，Trojan-Go 会在下一个检查周期自动加载
+- **添加用户**：插入新记录，Trojan-Go-Next 会在下一个检查周期自动加载
 - **删除用户**：删除记录即可
 - **设置配额**：修改 `quota` 字段（单位：字节）
 - **重置流量**：将 `download` 和 `upload` 设为 0
@@ -148,18 +148,18 @@ curl -H "X-API-Key: your-secret-api-key" \
 
 ```shell
 # 列出所有用户
-./trojan-go -api list -api-addr 127.0.0.1:10000
+./trojan-go-next -api list -api-addr 127.0.0.1:10000
 
 # 添加用户
-./trojan-go -api set -api-addr 127.0.0.1:10000 \
+./trojan-go-next -api set -api-addr 127.0.0.1:10000 \
     -add-profile -target-password "user-password"
 
 # 删除用户
-./trojan-go -api set -api-addr 127.0.0.1:10000 \
+./trojan-go-next -api set -api-addr 127.0.0.1:10000 \
     -delete-profile -target-password "user-password"
 
 # 设置限速（上传/下载，单位 KB/s）
-./trojan-go -api set -api-addr 127.0.0.1:10000 \
+./trojan-go-next -api set -api-addr 127.0.0.1:10000 \
     -target-password "user-password" \
     -upload-speed-limit 1024 \
     -download-speed-limit 1024

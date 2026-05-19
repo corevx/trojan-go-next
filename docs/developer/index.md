@@ -4,7 +4,7 @@ title: 开发者入门
 
 # 开发者入门
 
-欢迎参与 Trojan-Go 开发。本文帮助你快速了解项目结构和贡献流程。
+欢迎参与 Trojan-Go-Next 开发。本文帮助你快速了解项目结构和贡献流程。
 
 ## 技术栈
 
@@ -20,7 +20,7 @@ title: 开发者入门
 ## 项目结构速览
 
 ```
-trojan-go/
+trojan-go-next/
 ├── proxy/        # 5 种代理模式（client/server/forward/nat/custom）
 ├── tunnel/       # 15 个隧道层（tls/websocket/trojan/mux/router/...）
 ├── api/          # gRPC + REST API + 监控服务
@@ -39,7 +39,7 @@ trojan-go/
 
 ## 5 分钟理解核心设计
 
-Trojan-Go 采用**可插拔隧道栈**架构：
+Trojan-Go-Next 采用**可插拔隧道栈**架构：
 
 ```
 入站层 → 协议层 → 加密层 → 传输层 → 出站
@@ -54,8 +54,8 @@ Trojan-Go 采用**可插拔隧道栈**架构：
 ### 1. 环境准备
 
 ```shell
-git clone https://github.com/corevx/trojan-go-next.git
-cd trojan-go
+git clone https://github.com/corevx/trojan-go-next-next.git
+cd trojan-go-next
 make
 ```
 

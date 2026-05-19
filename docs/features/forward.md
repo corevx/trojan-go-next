@@ -6,7 +6,7 @@ title: "隧道与反向代理"
 
 ## 功能概述
 
-FORWARD 模式是 Trojan-Go 的端口转发功能。它将本地端口的 TCP/UDP 流量通过 Trojan TLS 隧道传输到远端服务器，再由服务器将流量转发到指定的目标地址和端口。
+FORWARD 模式是 Trojan-Go-Next 的端口转发功能。它将本地端口的 TCP/UDP 流量通过 Trojan TLS 隧道传输到远端服务器，再由服务器将流量转发到指定的目标地址和端口。
 
 本质上，FORWARD 模式是一个特殊的客户端——它不提供 SOCKS5/HTTP 代理接口，而是直接在本地监听一个端口，将所有进入该端口的流量原封不动地通过隧道转发到远端目标。
 
@@ -62,7 +62,7 @@ FORWARD 模式是 Trojan-Go 的端口转发功能。它将本地端口的 TCP/UD
 
 ### Shadowsocks-over-Trojan
 
-将其他代理协议的流量通过 Trojan 隧道传输。例如，远端服务器运行了一个 Shadowsocks 服务端监听 `127.0.0.1:12345`，同时运行了 Trojan-Go 服务端监听 443 端口：
+将其他代理协议的流量通过 Trojan 隧道传输。例如，远端服务器运行了一个 Shadowsocks 服务端监听 `127.0.0.1:12345`，同时运行了 Trojan-Go-Next 服务端监听 443 端口：
 
 ```json
 {
@@ -109,8 +109,8 @@ FORWARD 模式的核心配置项：
 以 DNS 转发为例：
 
 ```bash
-# 1. 启动 Trojan-Go FORWARD 模式
-trojan-go -config config.json
+# 1. 启动 Trojan-Go-Next FORWARD 模式
+trojan-go-next -config config.json
 
 # 2. 使用 dig 测试 DNS 查询（指定本地转发的 53 端口）
 dig @127.0.0.1 -p 53 google.com

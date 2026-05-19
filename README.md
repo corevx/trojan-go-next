@@ -1,16 +1,16 @@
-# Trojan-Go
+# Trojan-Go-Next
 
 **[简体中文](README_cn.md) | English**
 
 A complete Trojan proxy implementation in Go, compatible with the original Trojan protocol and configuration format. Secure, efficient, lightweight, and easy to use.
 
-Trojan-Go supports [multiplexing](#multiplexing) to improve concurrency performance, a built-in [routing module](#routing) for traffic splitting, [CDN traffic relay](#websocket) via WebSocket over TLS, [secondary encryption](#shadowsocks-aead-encryption) using Shadowsocks AEAD, and pluggable [transport layer plugins](#transport-plugin).
+Trojan-Go-Next supports [multiplexing](#multiplexing) to improve concurrency performance, a built-in [routing module](#routing) for traffic splitting, [CDN traffic relay](#websocket) via WebSocket over TLS, [secondary encryption](#shadowsocks-aead-encryption) using Shadowsocks AEAD, and pluggable [transport layer plugins](#transport-plugin).
 
-Pre-built binaries are available on the [Release page](https://github.com/corevx/trojan-go-next/releases). Just download, extract, and run — no additional dependencies required.
+Pre-built binaries are available on the [Release page](https://github.com/corevx/trojan-go-next-next/releases). Just download, extract, and run — no additional dependencies required.
 
 For questions, bug reports, or suggestions, join the [Telegram group](https://t.me/trojan_go_chat).
 
-**Full documentation: [Trojan-Go Docs](https://corevx.github.io/trojan-go-next)**
+**Full documentation: [Trojan-Go-Next Docs](https://corevx.github.io/trojan-go-next-next)**
 
 ## Features
 
@@ -41,7 +41,7 @@ For questions, bug reports, or suggestions, join the [Telegram group](https://t.
 
 ### GUI Clients
 
-Trojan-Go server is compatible with all clients that support the standard Trojan protocol. The following actively maintained clients work with Trojan-Go:
+Trojan-Go-Next server is compatible with all clients that support the standard Trojan protocol. The following actively maintained clients work with Trojan-Go-Next:
 
 - [v2rayN](https://github.com/2dust/v2rayN) — Windows / macOS / Linux client (Xray / sing-box core)
 - [Clash Verge Rev](https://github.com/clash-verge-rev/clash-verge-rev) — Cross-platform client (Windows / macOS / Linux) based on Mihomo
@@ -49,7 +49,7 @@ Trojan-Go server is compatible with all clients that support the standard Trojan
 - [ShadowRocket](https://apps.apple.com/app/shadowrocket/id932747118) — iOS client
 - [sing-box](https://github.com/SagerNet/sing-box) — Universal proxy platform (CLI / library)
 
-> **Note:** The above clients support the standard Trojan protocol. Trojan-Go extensions (WebSocket transport, smux multiplexing, Shadowsocks AEAD secondary encryption) require running the `trojan-go` binary directly. The previous GUI clients with built-in Trojan-Go core ([Qv2ray](https://github.com/Qv2ray/Qv2ray) and [Igniter-Go](https://github.com/p4gefau1t/trojan-go-android)) are no longer maintained.
+> **Note:** The above clients support the standard Trojan protocol. Trojan-Go-Next extensions (WebSocket transport, smux multiplexing, Shadowsocks AEAD secondary encryption) require running the `trojan-go-next` binary directly. The previous GUI clients with built-in Trojan-Go-Next core ([Qv2ray](https://github.com/Qv2ray/Qv2ray) and [Igniter-Go](https://github.com/p4gefau1t/trojan-go-next-android)) are no longer maintained.
 
 ## Quick Start
 
@@ -58,45 +58,45 @@ Trojan-Go server is compatible with all clients that support the standard Trojan
 Server:
 
 ```shell
-sudo ./trojan-go -server -remote 127.0.0.1:80 -local 0.0.0.0:443 \
+sudo ./trojan-go-next -server -remote 127.0.0.1:80 -local 0.0.0.0:443 \
     -key ./your_key.key -cert ./your_cert.crt -password your_password
 ```
 
 Client:
 
 ```shell
-./trojan-go -client -remote example.com:443 -local 127.0.0.1:1080 \
+./trojan-go-next -client -remote example.com:443 -local 127.0.0.1:1080 \
     -password your_password
 ```
 
 ### Config File Mode
 
 ```shell
-./trojan-go -config config.json
+./trojan-go-next -config config.json
 ```
 
 ### URL Mode
 
 ```shell
-./trojan-go -url 'trojan-go://password@cloudflare.com/?type=ws&path=%2Fpath&host=your-site.com'
+./trojan-go-next -url 'trojan-go-next://password@cloudflare.com/?type=ws&path=%2Fpath&host=your-site.com'
 ```
 
 ### Docker
 
 ```shell
-docker run --name trojan-go -d \
-    -v /etc/trojan-go/:/etc/trojan-go \
+docker run --name trojan-go-next -d \
+    -v /etc/trojan-go-next/:/etc/trojan-go-next \
     --network host \
-    ghcr.io/corevx/trojan-go-next
+    ghcr.io/corevx/trojan-go-next-next
 ```
 
 Or with a custom config path:
 
 ```shell
-docker run --name trojan-go -d \
+docker run --name trojan-go-next -d \
     -v /path/to/host/config:/path/in/container \
     --network host \
-    ghcr.io/corevx/trojan-go-next \
+    ghcr.io/corevx/trojan-go-next-next \
     /path/in/container/config.json
 ```
 
@@ -161,7 +161,7 @@ Enable WebSocket in both client and server config to relay traffic through a CDN
 }
 ```
 
-The server supports WebSocket and plain Trojan traffic simultaneously. Clients without WebSocket config still work. Both sides must use Trojan-Go to actually use WebSocket transport.
+The server supports WebSocket and plain Trojan traffic simultaneously. Clients without WebSocket config still work. Both sides must use Trojan-Go-Next to actually use WebSocket transport.
 
 ### Multiplexing
 
@@ -239,8 +239,8 @@ Client:
 > Requires Go >= 1.14
 
 ```shell
-git clone https://github.com/corevx/trojan-go-next.git
-cd trojan-go
+git clone https://github.com/corevx/trojan-go-next-next.git
+cd trojan-go-next
 make
 make install  # optional: install systemd service
 ```
@@ -271,7 +271,7 @@ Build tags: `full` (everything), `mini` (client+server+forward+nat+mysql), or in
 
 ## Architecture
 
-Trojan-Go uses a **pluggable tunnel stack** where each layer wraps the next. Tunnels register via `init()` in `tunnel/`. Five proxy modes compose different tunnel stacks:
+Trojan-Go-Next uses a **pluggable tunnel stack** where each layer wraps the next. Tunnels register via `init()` in `tunnel/`. Five proxy modes compose different tunnel stacks:
 
 | Mode    | Inbound              | Outbound       | Notes              |
 |---------|----------------------|----------------|---------------------|

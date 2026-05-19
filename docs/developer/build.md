@@ -28,14 +28,14 @@ make --version
 make
 ```
 
-产出位于 `build/trojan-go`，默认包含全部功能模块（`-tags "full"`），CGO 已禁用。
+产出位于 `build/trojan-go-next`，默认包含全部功能模块（`-tags "full"`），CGO 已禁用。
 
 等价的 Go 命令：
 
 ```bash
 CGO_ENABLED=0 go build -tags "full" -trimpath \
   -ldflags="-s -w -buildid=" \
-  -o build/trojan-go
+  -o build/trojan-go-next
 ```
 
 安装到系统路径（含 systemd 服务和 geoip 数据）：
@@ -46,7 +46,7 @@ make install
 
 ## 构建标签（Build Tags）
 
-Trojan-Go 的大多数模块通过 Go build tags 控制是否编译。`component/` 目录下的每个文件对应一个标签，通过条件导入决定包含哪些 proxy 和 tunnel 包。
+Trojan-Go-Next 的大多数模块通过 Go build tags 控制是否编译。`component/` 目录下的每个文件对应一个标签，通过条件导入决定包含哪些 proxy 和 tunnel 包。
 
 | 标签 | 包含内容 | 等价标签组合 |
 |------|----------|-------------|
@@ -84,23 +84,23 @@ go build -tags "mini"
 ```bash
 # Windows x86_64
 GOOS=windows GOARCH=amd64 go build -tags "full" -trimpath \
-  -ldflags="-s -w -buildid=" -o build/trojan-go.exe
+  -ldflags="-s -w -buildid=" -o build/trojan-go-next.exe
 
 # macOS Apple Silicon
 GOOS=darwin GOARCH=arm64 go build -tags "full" -trimpath \
-  -ldflags="-s -w -buildid=" -o build/trojan-go
+  -ldflags="-s -w -buildid=" -o build/trojan-go-next
 
 # Linux ARM (树莓派等)
 GOOS=linux GOARCH=arm GOARM=7 go build -tags "full" -trimpath \
-  -ldflags="-s -w -buildid=" -o build/trojan-go
+  -ldflags="-s -w -buildid=" -o build/trojan-go-next
 
 # Linux MIPS LE 软浮点（路由器）
 GOOS=linux GOARCH=mipsle GOMIPS=softfloat go build -tags "full" -trimpath \
-  -ldflags="-s -w -buildid=" -o build/trojan-go
+  -ldflags="-s -w -buildid=" -o build/trojan-go-next
 
 # Linux MIPS LE 硬浮点
 GOOS=linux GOARCH=mipsle GOMIPS=hardfloat go build -tags "full" -trimpath \
-  -ldflags="-s -w -buildid=" -o build/trojan-go
+  -ldflags="-s -w -buildid=" -o build/trojan-go-next
 ```
 
 ## 运行测试
@@ -126,13 +126,13 @@ SHADOWSOCKS_SF_CAPACITY="-1" go test -v ./tunnel/trojan/ -run TestTrojan
 
 ```bash
 # 基本构建
-docker build -t trojan-go .
+docker build -t trojan-go-next .
 
 # 指定版本信息
 docker build \
   --build-arg VERSION=0.10.6 \
   --build-arg COMMIT=$(git rev-parse HEAD) \
-  -t trojan-go:0.10.6 .
+  -t trojan-go-next:0.10.6 .
 ```
 
 Dockerfile 结构：
@@ -143,10 +143,10 @@ Dockerfile 结构：
 运行容器：
 
 ```bash
-docker run -d --name trojan-go \
-  -v /path/to/config.json:/etc/trojan-go/config.json \
+docker run -d --name trojan-go-next \
+  -v /path/to/config.json:/etc/trojan-go-next/config.json \
   -p 443:443 \
-  trojan-go
+  trojan-go-next
 ```
 
 ## 代码检查
@@ -194,7 +194,7 @@ var (
 Makefile 中的注入方式：
 
 ```makefile
-PACKAGE_NAME := github.com/p4gefau1t/trojan-go
+PACKAGE_NAME := github.com/p4gefau1t/trojan-go-next
 VERSION := `git describe --dirty`
 COMMIT  := `git rev-parse HEAD`
 
@@ -207,8 +207,8 @@ VAR_SETTING := -X $(PACKAGE_NAME)/constant.Version=$(VERSION) \
 ```bash
 go build -tags "full" -trimpath \
   -ldflags="-s -w -buildid= \
-    -X github.com/p4gefau1t/trojan-go/constant.Version=0.10.6 \
-    -X github.com/p4gefau1t/trojan-go/constant.Commit=$(git rev-parse HEAD)"
+    -X github.com/p4gefau1t/trojan-go-next/constant.Version=0.10.6 \
+    -X github.com/p4gefau1t/trojan-go-next/constant.Commit=$(git rev-parse HEAD)"
 ```
 
 运行时可通过 `-version` 参数查看注入的版本信息。

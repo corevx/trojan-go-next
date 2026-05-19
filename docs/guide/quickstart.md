@@ -4,7 +4,7 @@ title: 5 分钟快速入门
 
 # 5 分钟快速入门
 
-本页面向第一次使用 Trojan-Go 的用户。如果你已经熟悉 Trojan-Go，可以直接跳到 [配置入门](/guide/config) 或 [完整配置文件](/guide/full-config)。
+本页面向第一次使用 Trojan-Go-Next 的用户。如果你已经熟悉 Trojan-Go-Next，可以直接跳到 [配置入门](/guide/config) 或 [完整配置文件](/guide/full-config)。
 
 ## 你需要什么
 
@@ -14,13 +14,13 @@ title: 5 分钟快速入门
 
 ## 第一步：下载
 
-从 [Release 页面](https://github.com/corevx/trojan-go-next/releases) 下载对应平台的压缩包并解压：
+从 [Release 页面](https://github.com/corevx/trojan-go-next-next/releases) 下载对应平台的压缩包并解压：
 
 ```shell
 # Linux amd64 示例
-wget https://github.com/corevx/trojan-go-next/releases/latest/download/trojan-go-linux-amd64.zip
-unzip trojan-go-linux-amd64.zip
-chmod +x trojan-go
+wget https://github.com/corevx/trojan-go-next-next/releases/latest/download/trojan-go-next-linux-amd64.zip
+unzip trojan-go-next-linux-amd64.zip
+chmod +x trojan-go-next
 ```
 
 ::: tip 下载不了？
@@ -41,7 +41,7 @@ sudo certbot certonly --standalone -d your-domain.com
 一条命令启动：
 
 ```shell
-sudo ./trojan-go -server \
+sudo ./trojan-go-next -server \
     -remote 127.0.0.1:80 \
     -local 0.0.0.0:443 \
     -key /etc/letsencrypt/live/your-domain.com/privkey.pem \
@@ -58,7 +58,7 @@ sudo ./trojan-go -server \
 在你本地电脑上：
 
 ```shell
-./trojan-go -client \
+./trojan-go-next -client \
     -remote your-domain.com:443 \
     -local 127.0.0.1:1080 \
     -password your-password

@@ -4,11 +4,11 @@ title: 架构设计
 
 # 架构设计
 
-本文从高层视角介绍 Trojan-Go 的系统设计和数据流。
+本文从高层视角介绍 Trojan-Go-Next 的系统设计和数据流。
 
 ## 核心设计原则
 
-Trojan-Go 的核心设计是**可插拔隧道栈**（Pluggable Tunnel Stack）。每个功能模块（TLS、WebSocket、Trojan 协议、路由等）都实现为独立的隧道层，通过组合不同的隧道层构成完整的代理功能。
+Trojan-Go-Next 的核心设计是**可插拔隧道栈**（Pluggable Tunnel Stack）。每个功能模块（TLS、WebSocket、Trojan 协议、路由等）都实现为独立的隧道层，通过组合不同的隧道层构成完整的代理功能。
 
 ```
 ┌─────────────────────────────────────────┐

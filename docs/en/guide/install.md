@@ -4,7 +4,7 @@ title: Installation
 
 # Installation
 
-This guide walks you through deploying Trojan-Go from scratch.
+This guide walks you through deploying Trojan-Go-Next from scratch.
 
 ## Prerequisites
 
@@ -19,13 +19,13 @@ This guide walks you through deploying Trojan-Go from scratch.
 
 ### Pre-built Binaries (Recommended)
 
-Download from the [Release page](https://github.com/corevx/trojan-go-next/releases):
+Download from the [Release page](https://github.com/corevx/trojan-go-next-next/releases):
 
 ```shell
 # Linux amd64 example
-wget https://github.com/corevx/trojan-go-next/releases/latest/download/trojan-go-linux-amd64.zip
-unzip trojan-go-linux-amd64.zip
-chmod +x trojan-go
+wget https://github.com/corevx/trojan-go-next-next/releases/latest/download/trojan-go-next-linux-amd64.zip
+unzip trojan-go-next-linux-amd64.zip
+chmod +x trojan-go-next
 ```
 
 Supported platforms: Linux (amd64, arm, arm64, mips), macOS (Intel, Apple Silicon), Windows, FreeBSD.
@@ -33,12 +33,12 @@ Supported platforms: Linux (amd64, arm, arm64, mips), macOS (Intel, Apple Silico
 ### Docker
 
 ```shell
-docker pull ghcr.io/corevx/trojan-go-next
+docker pull ghcr.io/corevx/trojan-go-next-next
 
-docker run --name trojan-go -d \
-    -v /etc/trojan-go/:/etc/trojan-go \
+docker run --name trojan-go-next -d \
+    -v /etc/trojan-go-next/:/etc/trojan-go-next \
     --network host \
-    ghcr.io/corevx/trojan-go-next
+    ghcr.io/corevx/trojan-go-next-next
 ```
 
 ### Build from Source
@@ -46,14 +46,14 @@ docker run --name trojan-go -d \
 Requires Go >= 1.22:
 
 ```shell
-git clone https://github.com/corevx/trojan-go-next.git
-cd trojan-go
+git clone https://github.com/corevx/trojan-go-next-next.git
+cd trojan-go-next
 make
 ```
 
 ## TLS Certificate
 
-Trojan-Go requires a TLS certificate. Use Let's Encrypt for a free CA-signed cert:
+Trojan-Go-Next requires a TLS certificate. Use Let's Encrypt for a free CA-signed cert:
 
 ```shell
 sudo apt install certbot
@@ -69,7 +69,7 @@ Certificate files will be at `/etc/letsencrypt/live/example.com/`:
 Server:
 
 ```shell
-sudo ./trojan-go -server \
+sudo ./trojan-go-next -server \
     -remote 127.0.0.1:80 \
     -local 0.0.0.0:443 \
     -key /etc/letsencrypt/live/example.com/privkey.pem \
@@ -80,7 +80,7 @@ sudo ./trojan-go -server \
 Client:
 
 ```shell
-./trojan-go -client \
+./trojan-go-next -client \
     -remote example.com:443 \
     -local 127.0.0.1:1080 \
     -password your_password
@@ -107,7 +107,7 @@ After the client starts, `127.0.0.1:1080` is a SOCKS5/HTTP proxy port.
 }
 ```
 
-`remote_addr:remote_port` points to a local HTTP service. When non-Trojan traffic arrives (browser access, active probing), Trojan-Go forwards it there, making your server look like a normal HTTPS website.
+`remote_addr:remote_port` points to a local HTTP service. When non-Trojan traffic arrives (browser access, active probing), Trojan-Go-Next forwards it there, making your server look like a normal HTTPS website.
 
 ### Client Config (`client.json`)
 
@@ -127,14 +127,14 @@ After the client starts, `127.0.0.1:1080` is a SOCKS5/HTTP proxy port.
 1. Install the binary and service file:
 
 ```shell
-sudo cp trojan-go /usr/bin/trojan-go
+sudo cp trojan-go-next /usr/bin/trojan-go-next
 ```
 
-2. Create `/usr/lib/systemd/system/trojan-go.service`:
+2. Create `/usr/lib/systemd/system/trojan-go-next.service`:
 
 ```ini
 [Unit]
-Description=Trojan-Go
+Description=Trojan-Go-Next
 After=network.target nss-lookup.target
 
 [Service]
@@ -142,7 +142,7 @@ User=nobody
 CapabilityBoundingSet=CAP_NET_ADMIN CAP_NET_BIND_SERVICE
 AmbientCapabilities=CAP_NET_ADMIN CAP_NET_BIND_SERVICE
 NoNewPrivileges=true
-ExecStart=/usr/bin/trojan-go -config /etc/trojan-go/config.json
+ExecStart=/usr/bin/trojan-go-next -config /etc/trojan-go-next/config.json
 Restart=on-failure
 RestartSec=10s
 LimitNOFILE=infinity
@@ -155,8 +155,8 @@ WantedBy=multi-user.target
 
 ```shell
 sudo systemctl daemon-reload
-sudo systemctl enable trojan-go
-sudo systemctl start trojan-go
+sudo systemctl enable trojan-go-next
+sudo systemctl start trojan-go-next
 ```
 
 ## Verify

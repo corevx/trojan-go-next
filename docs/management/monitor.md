@@ -2,7 +2,7 @@
 title: "健康检查与监控（v0.11.0 新增）"
 ---
 
-Trojan-Go v0.11.0 新增了独立的监控服务，提供健康检查端点和 Prometheus 格式的指标输出，方便与 Kubernetes、Prometheus 等运维工具集成。
+Trojan-Go-Next v0.11.0 新增了独立的监控服务，提供健康检查端点和 Prometheus 格式的指标输出，方便与 Kubernetes、Prometheus 等运维工具集成。
 
 ## 配置
 
@@ -98,7 +98,7 @@ trojan_connection_duration_seconds_count 1584
 
 ```yaml
 scrape_configs:
-  - job_name: 'trojan-go'
+  - job_name: 'trojan-go-next'
     static_configs:
       - targets: ['127.0.0.1:9090']
     scrape_interval: 15s
@@ -112,13 +112,13 @@ scrape_configs:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: trojan-go
+  name: trojan-go-next
 spec:
   template:
     spec:
       containers:
-        - name: trojan-go
-          image: ghcr.io/corevx/trojan-go-next
+        - name: trojan-go-next
+          image: ghcr.io/corevx/trojan-go-next-next
           ports:
             - containerPort: 443
             - containerPort: 9090
