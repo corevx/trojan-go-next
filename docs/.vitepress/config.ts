@@ -62,11 +62,22 @@ function createSidebarZH() {
       text: '快速开始',
       collapsed: false,
       items: [
+        { text: '5 分钟快速入门', link: '/guide/quickstart' },
         { text: '安装指南', link: '/guide/install' },
-        { text: 'Trojan 原理入门', link: '/guide/trojan' },
+        { text: 'Trojan 原理', link: '/guide/trojan' },
         { text: '配置入门', link: '/guide/config' },
         { text: '完整配置文件', link: '/guide/full-config' },
         { text: '常见问题', link: '/guide/faq' }
+      ]
+    },
+    {
+      text: '部署指南',
+      collapsed: false,
+      items: [
+        { text: 'systemd 服务', link: '/deployment/systemd' },
+        { text: 'Docker 容器', link: '/deployment/docker' },
+        { text: 'TLS 证书管理', link: '/deployment/tls-certificates' },
+        { text: '多用户管理', link: '/deployment/multi-user' }
       ]
     },
     {
@@ -77,37 +88,42 @@ function createSidebarZH() {
         { text: 'WebSocket CDN 中转', link: '/features/websocket' },
         { text: '路由分流与广告屏蔽', link: '/features/router' },
         { text: 'AEAD 二次加密', link: '/features/aead' },
-        { text: '可插拔传输层', link: '/features/plugin' },
         { text: '隧道与反向代理', link: '/features/forward' },
         { text: '透明代理', link: '/features/nat' },
+        { text: '可插拔传输层', link: '/features/plugin' },
         { text: 'SNI 中继方案', link: '/features/nginx-relay' },
-        { text: '自定义协议栈', link: '/features/customize-protocol-stack' }
+        { text: '自定义协议栈', link: '/features/custom-stack' },
+        { text: 'URL 分享链接', link: '/features/url-scheme' }
       ]
     },
     {
       text: 'API 与管理',
       collapsed: false,
       items: [
-        { text: 'gRPC API', link: '/api/grpc' },
-        { text: 'REST API（v0.11.0 新增）', link: '/features/rest-api' },
-        { text: '健康检查与监控（v0.11.0 新增）', link: '/features/monitor' }
+        { text: 'gRPC API', link: '/management/grpc-api' },
+        { text: 'REST API（v0.11.0）', link: '/management/rest-api' },
+        { text: '健康检查与监控（v0.11.0）', link: '/management/monitor' },
+        { text: 'Prometheus 指标', link: '/management/metrics' }
       ]
     },
     {
       text: '开发指南',
       collapsed: true,
       items: [
+        { text: '开发者入门', link: '/developer/index' },
         { text: '架构概览', link: '/developer/overview' },
+        { text: '架构设计', link: '/developer/architecture' },
         { text: '编译与构建', link: '/developer/build' },
-        { text: 'Trojan 协议', link: '/developer/trojan' },
-        { text: 'WebSocket', link: '/developer/websocket' },
-        { text: '多路复用', link: '/developer/mux' },
+        { text: '隧道 API 参考', link: '/developer/tunnel-api' },
+        { text: 'Trojan 协议', link: '/developer/trojan-protocol' },
+        { text: 'WebSocket 实现', link: '/developer/websocket' },
+        { text: '多路复用实现', link: '/developer/mux' },
         { text: 'SimpleSocks 协议', link: '/developer/simplesocks' },
-        { text: '传输层插件开发', link: '/developer/plugin' },
-        { text: 'API 开发', link: '/developer/api' },
-        { text: 'URL 方案（草案）', link: '/developer/url' },
-        { text: '结构化日志（v0.11.0 新增）', link: '/developer/structured-logging' },
-        { text: '指标系统（v0.11.0 新增）', link: '/developer/metrics' },
+        { text: '传输层插件开发', link: '/developer/plugin-dev' },
+        { text: 'API 开发', link: '/developer/api-dev' },
+        { text: 'URL 方案规范', link: '/developer/url-spec' },
+        { text: '结构化日志（v0.11.0）', link: '/developer/structured-logging' },
+        { text: '指标系统（v0.11.0）', link: '/developer/metrics-impl' },
         { text: '更新日志', link: '/developer/changelog' }
       ]
     }
@@ -120,9 +136,11 @@ function createNavZH() {
     {
       text: '快速开始',
       items: [
+        { text: '5 分钟入门', link: '/guide/quickstart' },
         { text: '安装指南', link: '/guide/install' },
         { text: '配置入门', link: '/guide/config' },
-        { text: '完整配置文件', link: '/guide/full-config' }
+        { text: '完整配置文件', link: '/guide/full-config' },
+        { text: '常见问题', link: '/guide/faq' }
       ]
     },
     {
@@ -132,8 +150,17 @@ function createNavZH() {
         { text: 'WebSocket CDN', link: '/features/websocket' },
         { text: '路由分流', link: '/features/router' },
         { text: 'AEAD 加密', link: '/features/aead' },
-        { text: 'REST API', link: '/features/rest-api' },
-        { text: '监控', link: '/features/monitor' }
+        { text: 'REST API', link: '/management/rest-api' },
+        { text: '监控', link: '/management/monitor' }
+      ]
+    },
+    {
+      text: '部署',
+      items: [
+        { text: 'systemd', link: '/deployment/systemd' },
+        { text: 'Docker', link: '/deployment/docker' },
+        { text: 'TLS 证书', link: '/deployment/tls-certificates' },
+        { text: '多用户', link: '/deployment/multi-user' }
       ]
     },
     {
