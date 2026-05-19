@@ -10,10 +10,8 @@ Trojan-Go 同时支持 JSON 和 YAML 两种配置格式，二者结构等价。Y
 
 下面是同一份最小化服务端配置的两种写法：
 
-:::: code-group
-::: code-group-item JSON
-
-```json
+::: code-group
+```json [JSON]
 {
   "run_type": "server",
   "local_addr": "0.0.0.0",
@@ -28,10 +26,7 @@ Trojan-Go 同时支持 JSON 和 YAML 两种配置格式，二者结构等价。Y
 }
 ```
 
-:::
-::: code-group-item YAML
-
-```yaml
+```yaml [YAML]
 run-type: server
 local-addr: 0.0.0.0
 local-port: 443
@@ -43,9 +38,7 @@ ssl:
   cert: server.crt
   key: server.key
 ```
-
 :::
-::::
 
 启动时通过文件扩展名自动识别格式：`.json` 按 JSON 解析，`.yaml` / `.yml` 按 YAML 解析。
 
