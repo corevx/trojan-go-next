@@ -25,7 +25,7 @@ Trojan-Go支持使用Shadowsocks AEAD对Trojan-Go进行加密。其本质是在T
 "shadowsocks": {
     "enabled": true,
     "method": "AES-128-GCM",
-    "password": "1234567890"
+    "password": "your-strong-password"
 }
 ```
 

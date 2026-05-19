@@ -162,12 +162,14 @@ function createSidebarEN() {
       text: 'Features',
       collapsed: false,
       items: [
-        { text: 'Multiplexing', link: '/en/features/mux' },
-        { text: 'WebSocket CDN', link: '/en/features/websocket' },
-        { text: 'Routing', link: '/en/features/router' },
-        { text: 'AEAD Encryption', link: '/en/features/aead' },
-        { text: 'REST API (v0.11.0)', link: '/en/features/rest-api' },
-        { text: 'Monitoring (v0.11.0)', link: '/en/features/monitor' }
+        { text: 'Overview', link: '/en/features/' }
+      ]
+    },
+    {
+      text: 'Developer',
+      collapsed: false,
+      items: [
+        { text: 'Overview', link: '/en/developer/' }
       ]
     }
   ]

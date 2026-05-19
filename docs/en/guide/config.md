@@ -142,6 +142,6 @@ AEAD encryption must be enabled on both server and client with the same password
 
 ## Next Steps
 
-- [Full Configuration Reference](/guide/full-config) — Complete config file with all options
-- [WebSocket CDN Relay](/features/websocket) — CDN traffic relay setup
-- [Routing](/features/router) — Traffic splitting and ad blocking
+- [Full Configuration Reference (中文)](/guide/full-config) — Complete config file with all options
+- [WebSocket CDN Relay (中文)](/features/websocket) — CDN traffic relay setup
+- [Routing (中文)](/features/router) — Traffic splitting and ad blocking
