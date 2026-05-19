@@ -69,6 +69,7 @@ Context-based dependency injection (`config/config.go`). Each package registers 
 
 ## Git & Release 工作流
 
+- 提交作者：`corevx <corevx@users.noreply.github.com>`
 - 每完成一个功能性阶段后立即 commit，不要积攒大量改动后一次性提交
 - commit message 使用中文，清晰描述变更意图
 - 重要功能性更新或修改，按照语义化版本号（SemVer）更新 `version/` 中的版本号并发布
