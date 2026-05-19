@@ -1,5 +1,7 @@
 # Trojan-Go
 
+**[简体中文](README_cn.md) | English**
+
 A complete Trojan proxy implementation in Go, compatible with the original Trojan protocol and configuration format. Secure, efficient, lightweight, and easy to use.
 
 Trojan-Go supports [multiplexing](#multiplexing) to improve concurrency performance, a built-in [routing module](#routing) for traffic splitting, [CDN traffic relay](#websocket) via WebSocket over TLS, [secondary encryption](#shadowsocks-aead-encryption) using Shadowsocks AEAD, and pluggable [transport layer plugins](#transport-plugin).
@@ -290,5 +292,3 @@ Trojan-Go uses a **pluggable tunnel stack** where each layer wraps the next. Tun
 ## License
 
 [GPL-3.0](LICENSE)
-
-[简体中文](README_cn.md)

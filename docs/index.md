@@ -8,10 +8,10 @@ hero:
   actions:
     - theme: brand
       text: 快速开始
-      link: /basic/config
+      link: /guide/install
     - theme: alt
-      text: 完整配置
-      link: /basic/full-config
+      text: 配置入门
+      link: /guide/config
     - theme: alt
       text: GitHub
       link: https://github.com/corevx/trojan-go-next
