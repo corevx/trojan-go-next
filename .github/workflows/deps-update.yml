@@ -1,0 +1,176 @@
+name: Deps Update & Release
+
+on:
+  schedule:
+    # 每周一早上 5:00 (Asia/Shanghai)
+    - cron: "0 21 * * 0"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update-deps:
+    runs-on: ubuntu-latest
+    outputs:
+      has_changes: ${{ steps.check.outputs.has_changes }}
+    steps:
+      - name: Install Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.25"
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Update dependencies
+        run: |
+          go get -u ./...
+          go mod tidy
+          go mod verify
+
+      - name: Check for changes
+        id: check
+        run: |
+          if git diff --exit-code go.mod go.sum; then
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+            echo "No dependency updates found."
+          else
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+            echo "Dependency updates detected."
+          fi
+
+      - name: Create Pull Request
+        if: steps.check.outputs.has_changes == 'true'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "deps: 自动更新 Go 依赖"
+          title: "deps: 自动更新 Go 依赖"
+          body: |
+            ## 🤖 自动依赖更新
+
+            由 [Deps Update & Release](https://github.com/${{ github.repository }}/actions/workflows/deps-update.yml) 工作流自动创建。
+
+            ### 更新内容
+            以下依赖已更新到最新版本：
+
+            ```diff
+            $(git diff go.mod)
+            ```
+
+            ---
+            ✅ 测试通过后将自动合并。
+          branch: deps/auto-update
+          base: main
+          labels: dependencies, automated
+          delete-branch: true
+
+  test:
+    needs: update-deps
+    if: needs.update-deps.outputs.has_changes == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - name: Install Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.25"
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: deps/auto-update
+
+      - name: Check Go modules
+        run: |
+          go mod tidy
+          git diff --exit-code go.mod go.sum
+          go mod verify
+
+      - name: Test
+        run: make test
+        env:
+          SHADOWSOCKS_SF_CAPACITY: "-1"
+
+  auto-merge:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Merge PR
+        run: |
+          gh pr merge deps/auto-update --squash --delete-branch
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  build-and-release:
+    needs: auto-merge
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.25"
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Determine version
+        id: version
+        run: |
+          latest_tag=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+          # Extract version parts
+          major=$(echo "$latest_tag" | sed 's/v\([0-9]*\).*/\1/')
+          minor=$(echo "$latest_tag" | sed 's/v[0-9]*\.\([0-9]*\).*/\1/')
+          patch=$(echo "$latest_tag" | sed 's/v[0-9]*\.[0-9]*\.\([0-9]*\).*/\1/')
+          # Bump patch for deps update
+          new_patch=$((patch + 1))
+          new_tag="v${major}.${minor}.${new_patch}"
+          echo "tag=${new_tag}" >> $GITHUB_OUTPUT
+          echo "Building release: ${new_tag}"
+
+      - name: Build
+        run: make release -j$(nproc)
+
+      - name: Generate Release Notes
+        run: |
+          prev_tag=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          echo "## 📦 依赖更新构建" > RELEASE_NOTES.md
+          echo "" >> RELEASE_NOTES.md
+          echo "自动依赖更新后的发布版本。" >> RELEASE_NOTES.md
+          echo "" >> RELEASE_NOTES.md
+          if [ -n "$prev_tag" ]; then
+            echo "### Commits" >> RELEASE_NOTES.md
+            echo "" >> RELEASE_NOTES.md
+            git log --pretty=format:"- %s" "${prev_tag}..HEAD" >> RELEASE_NOTES.md || true
+            echo "" >> RELEASE_NOTES.md
+            echo "**Full Changelog**: https://github.com/${{ github.repository }}/compare/${prev_tag}...${{ steps.version.outputs.tag }}" >> RELEASE_NOTES.md
+          fi
+
+      - name: Create Git Tag
+        run: |
+          git tag ${{ steps.version.outputs.tag }}
+          git push origin ${{ steps.version.outputs.tag }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          body_path: RELEASE_NOTES.md
+          files: ./trojan-go-next-*.zip
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
