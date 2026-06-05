@@ -10,7 +10,7 @@ require (
 	github.com/stretchr/testify v1.11.1
 	github.com/txthinking/socks5 v0.0.0-20210716140126-fa1f52a8f2da
 	github.com/v2fly/v2ray-core/v4 v4.45.2
-	github.com/xtaci/smux v1.5.57
+	github.com/xtaci/smux v2.0.1+incompatible
 	golang.org/x/net v0.55.0
 	golang.org/x/term v0.43.0
 	golang.org/x/time v0.15.0
@@ -29,6 +29,7 @@ require (
 	github.com/klauspost/compress v1.17.4 // indirect
 	github.com/patrickmn/go-cache v2.1.0+incompatible // indirect
 	github.com/pires/go-proxyproto v0.6.1 // indirect
+	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/riobard/go-bloom v0.0.0-20200614022211-cdc8013cb5b3 // indirect
 	github.com/smarty/assertions v1.15.0 // indirect
