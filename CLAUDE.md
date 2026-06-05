@@ -79,6 +79,29 @@ Context-based dependency injection (`config/config.go`). Each package registers 
   - PATCH：向后兼容的 bug 修复
 - 不主动 push 到远程，除非用户明确要求
 
+## CI/CD 依赖自动更新
+
+基于 GitHub Actions 实现依赖定时更新、自动测试、自动合并与发布，由三个文件协同工作：
+
+| 文件 | 职责 |
+|------|------|
+| `.github/dependabot.yml` | Dependabot 配置：每周一检测 Go modules + GitHub Actions 更新，逐个创建 PR |
+| `.github/workflows/dependabot-auto-merge.yml` | Dependabot PR 自动 approve + merge（patch/minor 自动，major 需人工审核） |
+| `.github/workflows/deps-update.yml` | 全量更新流水线：定时 `go get -u` → 三平台测试 → 自动合并 → bump PATCH 版本 → 构建发布 |
+
+### deps-update.yml 流程
+
+```
+每周一 05:00 触发 → go get -u → 创建 PR → 三平台测试 → 自动合并 → bump 版本 → make release → GitHub Release
+```
+
+也可在 Actions 页面手动触发（Run workflow）。
+
+### 前置条件
+
+- GitHub 仓库 Settings → Actions → General 需开启 **Allow GitHub Actions to create and approve pull requests**
+- 远程仓库名为 `corevx`（非 `origin`），推送命令为 `git push corevx main`
+
 ## Key Conventions
 
 - GeoIP/GeoSite data files (`.dat`) are loaded from the binary's directory or `TROJAN_GO_LOCATION_ASSET` env var
