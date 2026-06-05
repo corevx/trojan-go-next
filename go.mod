@@ -9,7 +9,7 @@ require (
 	github.com/smartystreets/goconvey v1.6.4
 	github.com/stretchr/testify v1.11.1
 	github.com/txthinking/socks5 v0.0.0-20210716140126-fa1f52a8f2da
-	github.com/v2fly/v2ray-core/v4 v4.42.1
+	github.com/v2fly/v2ray-core/v4 v4.45.2
 	github.com/xtaci/smux v1.5.57
 	golang.org/x/net v0.54.0
 	golang.org/x/term v0.43.0
@@ -28,15 +28,18 @@ require (
 	github.com/jtolds/gls v4.20.0+incompatible // indirect
 	github.com/klauspost/compress v1.17.4 // indirect
 	github.com/patrickmn/go-cache v2.1.0+incompatible // indirect
-	github.com/pires/go-proxyproto v0.6.0 // indirect
+	github.com/pires/go-proxyproto v0.6.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/riobard/go-bloom v0.0.0-20200614022211-cdc8013cb5b3 // indirect
 	github.com/smartystreets/assertions v0.0.0-20180927180507-b2de0cb4f26d // indirect
 	github.com/txthinking/runnergroup v0.0.0-20210608031112-152c7c4432bf // indirect
 	github.com/txthinking/x v0.0.0-20210326105829-476fab902fbe // indirect
-	go.starlark.net v0.0.0-20210602144842-1cdb82c9e17a // indirect
+	go.starlark.net v0.0.0-20210901212718-87f333178d59 // indirect
+	go4.org/intern v0.0.0-20220301175310-a089fc204883 // indirect
+	go4.org/unsafe/assume-no-moving-gc v0.0.0-20211027215541-db492cf91b37 // indirect
 	golang.org/x/crypto v0.51.0 // indirect
 	golang.org/x/sys v0.44.0 // indirect
 	golang.org/x/text v0.37.0 // indirect
 	google.golang.org/genproto v0.0.0-20200526211855-cb27e3aa2013 // indirect
+	inet.af/netaddr v0.0.0-20210903134321-85fa6c94624e // indirect
 )
