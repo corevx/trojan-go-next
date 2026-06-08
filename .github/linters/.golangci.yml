@@ -17,17 +17,17 @@ linters:
   disable:
     - errcheck
     - goprintffuncname
-    - gosimple
     - nilerr
     - rowserrcheck
     - staticcheck
-    - stylecheck
     - unparam
     - unused
   exclusions:
     generated: strict
     rules:
       - path: \.pb\.go$
+        linters:
+          - all
     paths:
       - third_party
 
@@ -44,4 +44,5 @@ formatters:
         - default
         - prefix(github.com/p4gefau1t/trojan-go-next)
     goimports:
-      local-prefixes: github.com/p4gefau1t/trojan-go-next
+      local-prefixes:
+        - github.com/p4gefau1t/trojan-go-next
