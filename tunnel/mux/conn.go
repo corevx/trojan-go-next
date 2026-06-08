@@ -46,6 +46,20 @@ func (c *stickyConn) Close() error {
 	return c.Conn.Close()
 }
 
+// trySendQueue sends header to the channel non-blockingly.
+// If the channel is full, it discards the oldest entry and retries.
+func trySendQueue(ch chan []byte, header []byte) {
+	select {
+	case ch <- header:
+	default:
+		select {
+		case <-ch: // discard oldest
+		default:
+		}
+		ch <- header
+	}
+}
+
 func (c *stickyConn) Write(p []byte) (int, error) {
 	if len(p) == 8 {
 		if p[0] == 1 || p[0] == 2 { // smux 8 bytes header
@@ -56,13 +70,13 @@ func (c *stickyConn) Write(p []byte) (int, error) {
 				// cmdSYN
 				header := make([]byte, 8)
 				copy(header, p)
-				c.synQueue <- header
+				trySendQueue(c.synQueue, header)
 				return 8, nil
 			case 1:
 				// cmdFIN
 				header := make([]byte, 8)
 				copy(header, p)
-				c.finQueue <- header
+				trySendQueue(c.finQueue, header)
 				return 8, nil
 			}
 		} else {

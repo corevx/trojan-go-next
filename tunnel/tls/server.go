@@ -275,7 +275,8 @@ func loadKeyPair(keyPath string, certPath string, password string) (*tls.Certifi
 		if keyBlock == nil {
 			return nil, common.NewError("failed to decode key file").Base(err)
 		}
-		decryptedKey, err := x509.DecryptPEMBlock(keyBlock, []byte(password))
+		log.Warn("encrypted private keys (RFC 1423) are insecure, consider migrating to PKCS#8 format")
+		decryptedKey, err := x509.DecryptPEMBlock(keyBlock, []byte(password)) //nolint:staticcheck // SA1019 - no replacement available yet
 		if err != nil {
 			return nil, common.NewError("failed to decrypt key").Base(err)
 		}
@@ -340,7 +341,7 @@ func NewServer(ctx context.Context, underlay tunnel.Server) (*Server, error) {
 
 	keyPair, err := loadKeyPair(cfg.TLS.KeyPath, cfg.TLS.CertPath, cfg.TLS.KeyPassword)
 	if err != nil {
-		return nil, common.NewError("tls failed to load key pair")
+		return nil, common.NewError("tls failed to load key pair").Base(err)
 	}
 
 	// Validate certificate expiry
