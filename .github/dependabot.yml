@@ -15,6 +15,10 @@ updates:
     commit-message:
       prefix: deps
       include: scope
+    ignore:
+      # smux v2 API 不兼容（Open → OpenStream），需手动迁移
+      - dependency-name: "github.com/xtaci/smux"
+        update-types: ["version-update:semver-major"]
     reviewers:
       - corevx
 

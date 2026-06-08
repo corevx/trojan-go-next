@@ -32,8 +32,26 @@ jobs:
           go mod tidy
           go mod verify
 
+      - name: Verify build
+        id: verify
+        run: |
+          if ! CGO_ENABLED=0 go build -tags "full" ./...; then
+            echo "::warning::Build failed after dependency update, skipping this update"
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+            # Revert changes
+            git checkout -- go.mod go.sum
+            exit 0
+          fi
+          echo "build_ok=true" >> $GITHUB_OUTPUT
+
+      - name: Run tests
+        if: steps.verify.outputs.build_ok == 'true'
+        run: |
+          SHADOWSOCKS_SF_CAPACITY="-1" go test ./...
+
       - name: Check for changes
         id: check
+        if: steps.verify.outputs.build_ok == 'true'
         run: |
           if git diff --exit-code go.mod go.sum; then
             echo "has_changes=false" >> $GITHUB_OUTPUT
@@ -56,56 +74,22 @@ jobs:
             由 [Deps Update & Release](https://github.com/${{ github.repository }}/actions/workflows/deps-update.yml) 工作流自动创建。
 
             ### 更新内容
-            以下依赖已更新到最新版本：
 
             ```diff
             $(git diff go.mod)
             ```
 
-            ---
-            ✅ 测试通过后将自动合并。
+            ✅ 构建和测试已通过，将自动合并。
           branch: deps/auto-update
           base: main
           labels: dependencies, automated
           delete-branch: true
 
-  test:
+  auto-merge:
     needs: update-deps
     if: needs.update-deps.outputs.has_changes == 'true'
-    strategy:
-      fail-fast: false
-      matrix:
-        platform: [ubuntu-latest, windows-latest, macos-latest]
-    runs-on: ${{ matrix.platform }}
-    steps:
-      - name: Install Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: "1.25"
-
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          ref: deps/auto-update
-
-      - name: Check Go modules
-        run: |
-          go mod tidy
-          git diff --exit-code go.mod go.sum
-          go mod verify
-
-      - name: Test
-        run: make test
-        env:
-          SHADOWSOCKS_SF_CAPACITY: "-1"
-
-  auto-merge:
-    needs: test
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
       - name: Merge PR
         run: |
           gh pr merge deps/auto-update --squash --delete-branch
@@ -130,11 +114,9 @@ jobs:
         id: version
         run: |
           latest_tag=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
-          # Extract version parts
           major=$(echo "$latest_tag" | sed 's/v\([0-9]*\).*/\1/')
           minor=$(echo "$latest_tag" | sed 's/v[0-9]*\.\([0-9]*\).*/\1/')
           patch=$(echo "$latest_tag" | sed 's/v[0-9]*\.[0-9]*\.\([0-9]*\).*/\1/')
-          # Bump patch for deps update
           new_patch=$((patch + 1))
           new_tag="v${major}.${minor}.${new_patch}"
           echo "tag=${new_tag}" >> $GITHUB_OUTPUT

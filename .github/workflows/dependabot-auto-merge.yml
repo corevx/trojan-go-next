@@ -42,6 +42,8 @@ jobs:
       - name: Label major updates for manual review
         if: steps.metadata.outputs.update-type == 'version-update:semver-major'
         run: |
+          # Create label if it doesn't exist
+          gh label create "major-update" --color "B60205" --description "Major version update, requires manual review" || true
           gh pr edit "$PR_URL" --add-label "major-update"
           gh pr comment "$PR_URL" --body "⚠️ **Major version update** — requires manual review before merging."
         env:
