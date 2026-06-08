@@ -109,3 +109,10 @@ Context-based dependency injection (`config/config.go`). Each package registers 
 - API is gRPC-based with protobuf definitions in `api/service/`
 - The `redirector/` package handles server-side connection fallback
 - Server-side Node tree (`proxy/proxy.go`) enables branching to handle both direct TLS and WebSocket simultaneously
+
+## Version History
+
+| Version | Date | Changes |
+|---------|------|---------|
+| v1.0.1 | 2026-06-08 | fix: TLS 证书加载错误信息补全（上游 #513）；smux stickyConn 非阻塞防死锁；x509.DecryptPEMBlock 废弃警告 |
+| v1.0.0 | - | 初始发布版本 |
