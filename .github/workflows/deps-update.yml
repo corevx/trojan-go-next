@@ -32,26 +32,24 @@ jobs:
           go mod tidy
           go mod verify
 
-      - name: Verify build
+      - name: Verify build & tests
         id: verify
         run: |
           if ! CGO_ENABLED=0 go build -tags "full" ./...; then
-            echo "::warning::Build failed after dependency update, skipping this update"
-            echo "has_changes=false" >> $GITHUB_OUTPUT
-            # Revert changes
+            echo "::warning::Build failed after dependency update, skipping"
             git checkout -- go.mod go.sum
             exit 0
           fi
-          echo "build_ok=true" >> $GITHUB_OUTPUT
-
-      - name: Run tests
-        if: steps.verify.outputs.build_ok == 'true'
-        run: |
-          SHADOWSOCKS_SF_CAPACITY="-1" go test ./...
+          if ! SHADOWSOCKS_SF_CAPACITY="-1" go test ./...; then
+            echo "::warning::Tests failed after dependency update, skipping"
+            git checkout -- go.mod go.sum
+            exit 0
+          fi
+          echo "has_changes=ready" >> $GITHUB_OUTPUT
 
       - name: Check for changes
         id: check
-        if: steps.verify.outputs.build_ok == 'true'
+        if: steps.verify.outputs.has_changes == 'ready'
         run: |
           if git diff --exit-code go.mod go.sum; then
             echo "has_changes=false" >> $GITHUB_OUTPUT

@@ -19,6 +19,8 @@ updates:
       # smux v2 API 不兼容（Open → OpenStream），需手动迁移
       - dependency-name: "github.com/xtaci/smux"
         update-types: ["version-update:semver-major"]
+      # socks5 新版移除 RunTCPServer/RunUDPServer，需手动迁移
+      - dependency-name: "github.com/txthinking/socks5"
     reviewers:
       - corevx
 
