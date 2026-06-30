@@ -102,6 +102,22 @@ Context-based dependency injection (`config/config.go`). Each package registers 
 - GitHub 仓库 Settings → Actions → General 需开启 **Allow GitHub Actions to create and approve pull requests**
 - 远程仓库名为 `corevx`（非 `origin`），推送命令为 `git push corevx main`
 
+## 本地写权限与构建注意
+
+- **gh CLI 身份限制**：默认认证为 `toimc`，对 corevx/trojan-go-next 仅 READ 权限。需要写权限的操作（创建 label、上传 release assets 等），从本地 `.env` 加载 corevx 的 `GH_TOKEN`（fine-grained PAT，已 gitignore，**严禁提交**）：
+  ```bash
+  set -a; source .env; set +a
+  gh <写操作> --repo corevx/trojan-go-next
+  ```
+- **合并 dependabot PR（绕过 gh 权限）**：`git fetch corevx` → 本地 `git merge --no-ff corevx/<分支>` → `git push corevx main`，GitHub 自动把 PR 标记为 MERGED。
+- **发版**：`git tag -a vX.Y.Z -m "..."` → `git push corevx vX.Y.Z`，触发 `release-build.yml`（tag `v*.*.*`）+ `docker-build.yml`。
+- **本地 `make release`（macOS）**：系统无 `wget`，需改用 `curl` 下载 geo 数据；`github.com/.../raw` 易触发 429 限流，改用 `raw.githubusercontent.com`：
+  ```bash
+  curl -L -o geoip.dat https://raw.githubusercontent.com/v2fly/geoip/release/geoip.dat
+  curl -L -o geosite.dat https://raw.githubusercontent.com/v2fly/domain-list-community/release/dlc.dat
+  ```
+- **release 产物命名**：Makefile `NAME := trojan-go`，`action-gh-release` 的 `files` glob 必须是 `trojan-go-*.zip`（曾误写为 `trojan-go-next-*.zip`，导致 v1.0.1/v1.0.2 Release 缺二进制，v1.0.2 已修复）。
+
 ## Key Conventions
 
 - GeoIP/GeoSite data files (`.dat`) are loaded from the binary's directory or `TROJAN_GO_LOCATION_ASSET` env var
