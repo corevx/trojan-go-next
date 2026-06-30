@@ -114,5 +114,6 @@ Context-based dependency injection (`config/config.go`). Each package registers 
 
 | Version | Date | Changes |
 |---------|------|---------|
+| v1.0.2 | 2026-06-30 | ci: 修复 dependabot auto-merge major 误报；升级 GitHub Actions（checkout/setup-go v6、action-gh-release v3）；合并依赖更新 PR #1/#2/#3/#9 |
 | v1.0.1 | 2026-06-08 | fix: TLS 证书加载错误信息补全（上游 #513）；smux stickyConn 非阻塞防死锁；x509.DecryptPEMBlock 废弃警告 |
 | v1.0.0 | - | 初始发布版本 |

@@ -2,11 +2,42 @@
 title: "更新日志"
 ---
 
+## v1.0.2
+
+发布日期：2026-06-30。CI/CD 基础设施维护与依赖升级，无功能性变更，对终端用户无感知。
+
+### CI/CD 修复
+
+- 修复 `dependabot-auto-merge` 工作流在 **major 版本更新**时误报失败的问题：根因是 `pull_request_target` 事件无 checkout 步骤，`gh label create` 缺少 `--repo` 上下文导致找不到 git 仓库；修复方式为注入 `GH_REPO` 环境变量，并对 major 通知步骤增加 `continue-on-error` 容错
+- 合并 Dependabot 累积的依赖更新 PR（#1 checkout、#2 action-gh-release、#3 setup-go、#9 golang.org/x/net）
+
+### 依赖升级
+
+| 依赖 | 旧版本 | 新版本 | 类型 |
+|------|--------|--------|------|
+| actions/checkout | v4 | v6 | major |
+| actions/setup-go | v5 | v6 | major |
+| softprops/action-gh-release | v2 | v3 | major |
+| golang.org/x/net | 0.55.0 | 0.56.0 | minor |
+
+## v1.0.1
+
+发布日期：2026-06-08。TLS 与 smux 稳定性修复。
+
+- **TLS**：证书加载错误信息补全（上游 Issue #513）
+- **smux**：`stickyConn` 改为非阻塞发送，防止 channel 满时 goroutine 死锁
+- **兼容性**：处理 `x509.DecryptPEMBlock` 在新版 Go 中的废弃警告
+- **CI**：修复 golangci-lint 配置与 shadowsocks 测试超时问题
+
+## v1.0.0
+
+初始正式发布版本。基于 `0.10.6-bugfix` 稳定基线，确立语义化版本号（SemVer）体系与完整的 CI/CD 流水线（Test、Linter、Docker 多架构构建、nightly 构建、自动发布）。详细变更请参见下方 `0.10.6-bugfix` 的完整明细。
+
 ## 0.10.6-bugfix
 
 本次更新基于 p4gefau1t/trojan-go-next v0.10.6，精选了安全性和稳定性修复。仅修 bug，不加功能，不改架构。
 
-项目现由 [corevx](https://github.com/corevx) 维护，仓库迁移至 [corevx/trojan-go-next-next](https://github.com/corevx/trojan-go-next-next)。
+项目现由 [corevx](https://github.com/corevx) 维护，仓库迁移至 [corevx/trojan-go-next](https://github.com/corevx/trojan-go-next)。
 
 ### 重要变更
 
