@@ -104,11 +104,7 @@ Context-based dependency injection (`config/config.go`). Each package registers 
 
 ## 本地写权限与构建注意
 
-- **gh CLI 身份限制**：默认认证为 `toimc`，对 corevx/trojan-go-next 仅 READ 权限。需要写权限的操作（创建 label、上传 release assets 等），从本地 `.env` 加载 corevx 的 `GH_TOKEN`（fine-grained PAT，已 gitignore，**严禁提交**）：
-  ```bash
-  set -a; source .env; set +a
-  gh <写操作> --repo corevx/trojan-go-next
-  ```
+- **gh CLI 身份限制**：默认认证账号对 corevx/trojan-go-next 仅 READ 权限。需要写权限的 gh 操作（创建 label、上传 release assets 等）需使用 owner 凭证，**凭证细节不写入本公开文件**（见 agent 本地记忆 `corevx-repo-permission-boundary`）。
 - **合并 dependabot PR（绕过 gh 权限）**：`git fetch corevx` → 本地 `git merge --no-ff corevx/<分支>` → `git push corevx main`，GitHub 自动把 PR 标记为 MERGED。
 - **发版**：`git tag -a vX.Y.Z -m "..."` → `git push corevx vX.Y.Z`，触发 `release-build.yml`（tag `v*.*.*`）+ `docker-build.yml`。
 - **本地 `make release`（macOS）**：系统无 `wget`，需改用 `curl` 下载 geo 数据；`github.com/.../raw` 易触发 429 限流，改用 `raw.githubusercontent.com`：
