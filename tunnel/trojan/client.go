@@ -16,6 +16,7 @@ import (
 	"github.com/p4gefau1t/trojan-go/statistic/memory"
 	"github.com/p4gefau1t/trojan-go/tunnel"
 	"github.com/p4gefau1t/trojan-go/tunnel/mux"
+	"github.com/p4gefau1t/trojan-go/tunnel/reverse"
 )
 
 const (
@@ -25,6 +26,7 @@ const (
 const (
 	Connect   tunnel.Command = 1
 	Associate tunnel.Command = 3
+	Reverse   tunnel.Command = 4
 	Mux       tunnel.Command = 0x7f
 )
 
@@ -122,6 +124,9 @@ func (c *Client) DialConn(addr *tunnel.Address, overlay tunnel.Tunnel) (tunnel.C
 	}
 	if _, ok := overlay.(*mux.Tunnel); ok {
 		newConn.metadata.Command = Mux
+	}
+	if _, ok := overlay.(*reverse.Tunnel); ok {
+		newConn.metadata.Command = Reverse
 	}
 
 	go func(newConn *OutboundConn) {

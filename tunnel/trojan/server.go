@@ -19,10 +19,11 @@ import (
 	"github.com/p4gefau1t/trojan-go/statistic/mysql"
 	"github.com/p4gefau1t/trojan-go/tunnel"
 	"github.com/p4gefau1t/trojan-go/tunnel/mux"
+	"github.com/p4gefau1t/trojan-go/tunnel/reverse"
 )
 
 var (
-	connTotal = metric.RegisterCounter("trojan_connections_total", "Total number of trojan connections accepted")
+	connTotal    = metric.RegisterCounter("trojan_connections_total", "Total number of trojan connections accepted")
 	connDuration = metric.RegisterHistogram("trojan_connection_duration_seconds", "Connection duration in seconds",
 		[]float64{0.1, 0.5, 1, 5, 10, 30, 60, 300, 600, 1800, 3600})
 )
@@ -124,17 +125,25 @@ func (c *InboundConn) Auth() error {
 	return nil
 }
 
+// UserHash exposes the hash of the authenticated user so identity-aware
+// upper tunnels (reverse) can enforce per-user ACLs without a dependency
+// on this package
+func (c *InboundConn) UserHash() string {
+	return c.hash
+}
+
 // Server is a trojan tunnel server
 type Server struct {
-	auth       statistic.Authenticator
-	redir      *redirector.Redirector
-	redirAddr  *tunnel.Address
-	underlay   tunnel.Server
-	connChan   chan tunnel.Conn
-	muxChan    chan tunnel.Conn
-	packetChan chan tunnel.PacketConn
-	ctx        context.Context
-	cancel     context.CancelFunc
+	auth        statistic.Authenticator
+	redir       *redirector.Redirector
+	redirAddr   *tunnel.Address
+	underlay    tunnel.Server
+	connChan    chan tunnel.Conn
+	muxChan     chan tunnel.Conn
+	reverseChan chan tunnel.Conn
+	packetChan  chan tunnel.PacketConn
+	ctx         context.Context
+	cancel      context.CancelFunc
 }
 
 func (s *Server) Close() error {
@@ -211,6 +220,13 @@ func (s *Server) acceptLoop() {
 					log.Warn(common.NewError("packet channel full, dropping connection"))
 				}
 				log.Debug("trojan udp connection")
+			case Reverse:
+				select {
+				case s.reverseChan <- inboundConn:
+				default:
+					log.Warn(common.NewError("reverse channel full, dropping connection"))
+				}
+				log.Debug("reverse connection")
 			case Mux:
 				select {
 				case s.muxChan <- inboundConn:
@@ -230,6 +246,13 @@ func (s *Server) AcceptConn(nextTunnel tunnel.Tunnel) (tunnel.Conn, error) {
 	case *mux.Tunnel:
 		select {
 		case t := <-s.muxChan:
+			return t, nil
+		case <-s.ctx.Done():
+			return nil, common.NewError("trojan client closed")
+		}
+	case *reverse.Tunnel:
+		select {
+		case t := <-s.reverseChan:
 			return t, nil
 		case <-s.ctx.Done():
 			return nil, common.NewError("trojan client closed")
@@ -278,15 +301,16 @@ func NewServer(ctx context.Context, underlay tunnel.Server) (*Server, error) {
 
 	redirAddr := tunnel.NewAddressFromHostPort("tcp", cfg.RemoteHost, cfg.RemotePort)
 	s := &Server{
-		underlay:   underlay,
-		auth:       auth,
-		redirAddr:  redirAddr,
-		connChan:   make(chan tunnel.Conn, 32),
-		muxChan:    make(chan tunnel.Conn, 32),
-		packetChan: make(chan tunnel.PacketConn, 32),
-		ctx:        ctx,
-		cancel:     cancel,
-		redir:      redirector.NewRedirector(ctx),
+		underlay:    underlay,
+		auth:        auth,
+		redirAddr:   redirAddr,
+		connChan:    make(chan tunnel.Conn, 32),
+		muxChan:     make(chan tunnel.Conn, 32),
+		reverseChan: make(chan tunnel.Conn, 32),
+		packetChan:  make(chan tunnel.PacketConn, 32),
+		ctx:         ctx,
+		cancel:      cancel,
+		redir:       redirector.NewRedirector(ctx),
 	}
 
 	if !cfg.DisableHTTPCheck {
