@@ -119,6 +119,7 @@ function createSidebarZH() {
         { text: 'WebSocket 实现', link: '/developer/websocket' },
         { text: '多路复用实现', link: '/developer/mux' },
         { text: 'SimpleSocks 协议', link: '/developer/simplesocks' },
+        { text: '反向端口转发', link: '/developer/reverse' },
         { text: '传输层插件开发', link: '/developer/plugin-dev' },
         { text: 'API 开发', link: '/developer/api-dev' },
         { text: 'URL 方案规范', link: '/developer/url-spec' },

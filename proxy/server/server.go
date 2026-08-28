@@ -8,6 +8,7 @@ import (
 	"github.com/p4gefau1t/trojan-go/proxy/client"
 	"github.com/p4gefau1t/trojan-go/tunnel/freedom"
 	"github.com/p4gefau1t/trojan-go/tunnel/mux"
+	"github.com/p4gefau1t/trojan-go/tunnel/reverse"
 	"github.com/p4gefau1t/trojan-go/tunnel/router"
 	"github.com/p4gefau1t/trojan-go/tunnel/shadowsocks"
 	"github.com/p4gefau1t/trojan-go/tunnel/simplesocks"
@@ -49,21 +50,36 @@ func init() {
 		if cfg.Shadowsocks.Enabled {
 			trojanSubTree = trojanSubTree.BuildNext(shadowsocks.Name)
 		}
-		trojanSubTree.BuildNext(trojan.Name).BuildNext(mux.Name).BuildNext(simplesocks.Name).IsEndpoint = true
-		trojanSubTree.BuildNext(trojan.Name).IsEndpoint = true
+		trojanNode := trojanSubTree.BuildNext(trojan.Name)
+		trojanNode.BuildNext(mux.Name).BuildNext(simplesocks.Name).IsEndpoint = true
+		trojanNode.IsEndpoint = true
 
 		wsSubTree := root.BuildNext(websocket.Name)
 		if cfg.Shadowsocks.Enabled {
 			wsSubTree = wsSubTree.BuildNext(shadowsocks.Name)
 		}
-		wsSubTree.BuildNext(trojan.Name).BuildNext(mux.Name).BuildNext(simplesocks.Name).IsEndpoint = true
-		wsSubTree.BuildNext(trojan.Name).IsEndpoint = true
+		wsTrojanNode := wsSubTree.BuildNext(trojan.Name)
+		wsTrojanNode.BuildNext(mux.Name).BuildNext(simplesocks.Name).IsEndpoint = true
+		wsTrojanNode.IsEndpoint = true
 
 		serverList := proxy.FindAllEndpoints(root)
 		clientList, err := proxy.CreateClientStack(ctx, clientStack)
 		if err != nil {
 			cancel()
 			return nil, err
+		}
+		if reverseCfg, ok := config.FromContext(ctx, reverse.Name).(*reverse.Config); ok && reverseCfg.Enabled {
+			// the reverse server consumes reverse-command trojan connections
+			// and runs autonomously beside the node tree (like trojan's own
+			// acceptLoop), so it is not registered as an endpoint
+			reverseServer, err := reverse.NewServer(ctx, trojanNode.Server)
+			if err != nil {
+				cancel()
+				return nil, err
+			}
+			// both trojan servers (direct TLS path and websocket path) share
+			// the same port ownership registry
+			reverseServer.ListenOn(wsTrojanNode.Server)
 		}
 		return proxy.NewProxy(ctx, cancel, serverList, clientList), nil
 	})

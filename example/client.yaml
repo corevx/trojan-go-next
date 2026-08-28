@@ -9,6 +9,12 @@ ssl:
     sni: your-domain-name.com
 mux:
     enabled: true
+# 反向端口转发（daemon 模式由嵌入方调用 DialReverse；这里仅作配置示例）
+# reverse:
+#     enabled: true
+#     forwards:
+#         - remote-port: 27061        # 服务端绑定的端口
+#           target: 127.0.0.1:22      # 客户端本地转发的目标
 router:
     enabled: true
     bypass: ['geoip:cn', 'geoip:private', 'geosite:cn', 'geosite:private']

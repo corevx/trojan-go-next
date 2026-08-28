@@ -68,6 +68,12 @@ func init() {
 			cancel()
 			return nil, err
 		}
+		// TODO(P1): reverse forwards (daemon mode). When reverse.enabled and
+		// reverse.forwards are set, build the trojan client directly (without
+		// the router/mux layers on top) and call reverse.DialReverse for each
+		// forward entry with WithTarget(fwd.Target). Embedded callers already
+		// do this themselves; the stock client stack does not expose the inner
+		// trojan client instance yet.
 		s := proxy.FindAllEndpoints(root)
 		return proxy.NewProxy(ctx, cancel, s, c), nil
 	})

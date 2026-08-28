@@ -5,6 +5,17 @@ remote-addr: 127.0.0.1
 remote-port: 80
 password:
   - your_password
+# 反向端口转发：允许客户端把内网服务暴露到服务端端口（trojan 命令字 4）
+# reverse:
+#   enabled: true
+#   default-bind-host: 127.0.0.1   # 未单独配置 bind-host 的用户默认绑定地址
+#   idle-timeout: 60               # 空闲流超时（秒），同时影响断线检测
+#   stream-buffer: 262144          # smux 流缓冲
+#   users:
+#     - password: your_password
+#       allow-ports: ['27061-27099']  # 允许绑定的端口段，支持 "27061-27099" 或 "27061"
+#       bind-host: 127.0.0.1          # 该用户绑定地址，缺省用 default-bind-host
+#       max-listeners: 1              # 该用户最大同时绑定端口数
 ssl:
   cert: your_cert.crt
   key: your_key.key
