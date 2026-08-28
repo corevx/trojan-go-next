@@ -68,7 +68,7 @@ func init() {
 			cancel()
 			return nil, err
 		}
-		if reverseCfg, ok := config.FromContext(ctx, reverse.Name).(*reverse.Config); ok && reverseCfg.Enabled {
+		if reverseCfg, ok := config.FromContext(ctx, reverse.Name).(*reverse.Config); ok && reverseCfg.Reverse.Enabled {
 			// the reverse server consumes reverse-command trojan connections
 			// and runs autonomously beside the node tree (like trojan's own
 			// acceptLoop), so it is not registered as an endpoint

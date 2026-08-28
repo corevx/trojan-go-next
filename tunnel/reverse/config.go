@@ -102,7 +102,9 @@ type ForwardConfig struct {
 	Target     string `json:"target" yaml:"target"`
 }
 
-type Config struct {
+// Section 是 reverse 节本体(trojan-go 约定:顶层节内容是注册 Config 的字段,
+// 见 shadowsocks/router 同款包装)。
+type Section struct {
 	Enabled         bool            `json:"enabled" yaml:"enabled"`
 	DefaultBindHost string          `json:"default_bind_host" yaml:"default-bind-host"`
 	IdleTimeout     int             `json:"idle_timeout" yaml:"idle-timeout"`
@@ -111,13 +113,21 @@ type Config struct {
 	Forwards        []ForwardConfig `json:"forwards" yaml:"forwards"`
 }
 
+// Config 是注册到 config 体系的顶层结构,YAML `reverse:` 节经 Reverse 字段落位。
+// 库式注入(config.WithConfig)同样传 &Config{Reverse: Section{...}}。
+type Config struct {
+	Reverse Section `json:"reverse" yaml:"reverse"`
+}
+
 func init() {
 	config.RegisterConfigCreator(Name, func() interface{} {
 		return &Config{
-			Enabled:         false,
-			DefaultBindHost: defaultBindHost,
-			IdleTimeout:     defaultIdleTimeout,
-			StreamBuffer:    defaultStreamBuffer,
+			Reverse: Section{
+				Enabled:         false,
+				DefaultBindHost: defaultBindHost,
+				IdleTimeout:     defaultIdleTimeout,
+				StreamBuffer:    defaultStreamBuffer,
+			},
 		}
 	})
 }

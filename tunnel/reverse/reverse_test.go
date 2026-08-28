@@ -99,15 +99,17 @@ func newTestStack(t *testing.T) *testStack {
 	}
 	newReverseConfig := func() *reverse.Config {
 		return &reverse.Config{
-			Enabled:         true,
-			DefaultBindHost: "127.0.0.1",
-			IdleTimeout:     testIdleTimeout,
-			StreamBuffer:    testStreamBuffer,
-			Users: []reverse.UserConfig{
-				{
-					Password:     authPassword,
-					AllowPorts:   allowPorts,
-					MaxListeners: 2,
+			Reverse: reverse.Section{
+				Enabled:         true,
+				DefaultBindHost: "127.0.0.1",
+				IdleTimeout:     testIdleTimeout,
+				StreamBuffer:    testStreamBuffer,
+				Users: []reverse.UserConfig{
+					{
+						Password:     authPassword,
+						AllowPorts:   allowPorts,
+						MaxListeners: 2,
+					},
 				},
 			},
 		}

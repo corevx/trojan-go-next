@@ -47,7 +47,7 @@ type userHashConn interface {
 //     without affecting its normal proxy usage.
 type Server struct {
 	underlay tunnel.Server
-	cfg      *Config
+	cfg      *Section
 	users    map[string]*userACL
 
 	mu        sync.Mutex
@@ -490,7 +490,7 @@ func NewServer(ctx context.Context, underlay tunnel.Server) (*Server, error) {
 	if cfgInterface == nil {
 		return nil, common.NewError("reverse config not found")
 	}
-	cfg := cfgInterface.(*Config)
+	cfg := &cfgInterface.(*Config).Reverse
 
 	users := make(map[string]*userACL)
 	for _, u := range cfg.Users {

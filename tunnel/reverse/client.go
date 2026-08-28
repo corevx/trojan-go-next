@@ -77,7 +77,7 @@ func (e *BindError) Permanent() bool {
 // connections, effectively a reverse port forward.
 type Client struct {
 	underlay tunnel.Client
-	cfg      *Config
+	cfg      *Section
 	ctx      context.Context
 	cancel   context.CancelFunc
 
@@ -153,7 +153,7 @@ func NewClient(ctx context.Context, underlay tunnel.Client) (*Client, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	client := &Client{
 		underlay: underlay,
-		cfg:      cfgInterface.(*Config),
+		cfg:      &cfgInterface.(*Config).Reverse,
 		ctx:      ctx,
 		cancel:   cancel,
 	}
