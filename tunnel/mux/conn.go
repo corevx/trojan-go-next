@@ -87,7 +87,10 @@ func (c *stickyConn) Write(p []byte) (int, error) {
 	return len(p), err
 }
 
-func newStickyConn(conn tunnel.Conn) *stickyConn {
+// NewStickyConn wraps a tunnel.Conn so that smux frame headers are stuck to
+// the following payload, mitigating smux fingerprinting on the wire. It is
+// used by both the mux client and the reverse tunnel client.
+func NewStickyConn(conn tunnel.Conn) *stickyConn {
 	return &stickyConn{
 		Conn:     conn,
 		synQueue: make(chan []byte, 128),
