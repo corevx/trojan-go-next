@@ -3,7 +3,7 @@ module github.com/p4gefau1t/trojan-go
 go 1.25.0
 
 require (
-	github.com/go-sql-driver/mysql v1.10.0
+	github.com/go-sql-driver/mysql v1.10.1
 	github.com/refraction-networking/utls v1.8.2
 	github.com/shadowsocks/go-shadowsocks2 v0.1.5
 	github.com/smartystreets/goconvey v1.8.1
