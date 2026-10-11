@@ -153,6 +153,7 @@ func (s *Server) handleConn(conn tunnel.Conn) {
 	smuxConfig.MaxStreamBuffer = s.cfg.StreamBuffer
 	smuxConfig.MaxReceiveBuffer = s.cfg.StreamBuffer
 	applyKeepalive(smuxConfig, s.cfg.IdleTimeout)
+	applyFrameShaping(smuxConfig, *s.cfg)
 	session, err := smux.Client(conn, smuxConfig)
 	if err != nil {
 		log.Error(common.NewError("reverse failed to create smux session").Base(err))

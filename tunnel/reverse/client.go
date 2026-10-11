@@ -310,6 +310,7 @@ func (l *ReverseListener) connect() error {
 	smuxConfig.MaxStreamBuffer = l.client.cfg.StreamBuffer
 	smuxConfig.MaxReceiveBuffer = l.client.cfg.StreamBuffer
 	applyKeepalive(smuxConfig, l.client.cfg.IdleTimeout)
+	applyFrameShaping(smuxConfig, *l.client.cfg)
 	session, err := smux.Server(conn, smuxConfig)
 	if err != nil {
 		conn.Close()
@@ -462,11 +463,30 @@ func (l *ReverseListener) acceptLoop(rs *reverseSession) {
 }
 
 // keepaliveLoop sends Ping frames on the control stream; drainControl reads
-// the Pong frames so the control stream buffer never fills up
+// the Pong frames so the control stream buffer never fills up. With
+// keepalive-jitter configured the ping cadence is re-drawn per round so the
+// probes don't form a fixed-period beacon.
 func (l *ReverseListener) keepaliveLoop(rs *reverseSession) {
 	go drainControl(rs)
-	ticker := time.NewTicker(pingInterval(l.client.cfg.IdleTimeout))
-	defer ticker.Stop()
+	jitter := l.client.cfg.KeepaliveJitter
+	var ticker *time.Ticker
+	var timer *time.Timer
+	var pingC <-chan time.Time
+	if jitter > 0 {
+		timer = time.NewTimer(jitterDuration(pingInterval(l.client.cfg.IdleTimeout), jitter))
+		pingC = timer.C
+	} else {
+		ticker = time.NewTicker(pingInterval(l.client.cfg.IdleTimeout))
+		pingC = ticker.C
+	}
+	defer func() {
+		if ticker != nil {
+			ticker.Stop()
+		}
+		if timer != nil {
+			timer.Stop()
+		}
+	}()
 	for {
 		select {
 		case <-l.ctx.Done():
@@ -476,15 +496,28 @@ func (l *ReverseListener) keepaliveLoop(rs *reverseSession) {
 		case <-rs.session.CloseChan():
 			rs.markDead()
 			return
-		case <-ticker.C:
+		case <-pingC:
 			rs.control.SetWriteDeadline(time.Now().Add(controlWriteWait))
 			err := writeFrame(rs.control, framePing, (&ping{Nonce: uint64(time.Now().UnixNano())}).marshal())
 			if err != nil {
 				rs.markDead()
 				return
 			}
+			if timer != nil {
+				timer.Reset(jitterDuration(pingInterval(l.client.cfg.IdleTimeout), jitter))
+			}
 		}
 	}
+}
+
+// jitterDuration draws d*(1 ± jitter); 0/负截到 1ms 保底。
+func jitterDuration(d time.Duration, jitter float64) time.Duration {
+	delta := 2*rand.Float64() - 1
+	out := time.Duration(float64(d) * (1 + jitter*delta))
+	if out < time.Millisecond {
+		out = time.Millisecond
+	}
+	return out
 }
 
 // drainControl consumes the Pong frames of one session; a control read error

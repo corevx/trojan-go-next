@@ -7,6 +7,7 @@ import (
 
 	"github.com/p4gefau1t/trojan-go/common"
 	"github.com/p4gefau1t/trojan-go/config"
+	"github.com/xtaci/smux"
 )
 
 const (
@@ -114,9 +115,19 @@ type Section struct {
 	// session 健康检测职责(smux keepalive 间隔/ping 间隔)解耦:
 	// 0=未配置,跟随 IdleTimeout(向后兼容);-1=禁用流掐断(长连语义,
 	// 僵尸回收交由 session 死亡全量回收)。
-	StreamIdleTimeout int             `json:"stream_idle_timeout" yaml:"stream-idle-timeout"`
-	Users             []UserConfig    `json:"users" yaml:"users"`
-	Forwards          []ForwardConfig `json:"forwards" yaml:"forwards"`
+	StreamIdleTimeout int `json:"stream_idle_timeout" yaml:"stream-idle-timeout"`
+	// FrameMin/FrameMax smux 帧级随机化:每帧 payload 在 [frame-min, frame-max]
+	// 均匀随机(两者须同时>0 启用,0=关闭,固定 MaxFrameSize 切分向后兼容)。
+	// 动机:TLS record 头 5B 明文长度 DPI 直读,固定分片→固定 record 周期
+	// =可统计指纹;随机帧长→随机 record 长。线上协议零改动(帧头自带长度,
+	// 旧对端照常解析,仅发送侧行为)。
+	FrameMin int `json:"frame_min" yaml:"frame-min"`
+	FrameMax int `json:"frame_max" yaml:"frame-max"`
+	// KeepaliveJitter keepalive/ping 间隔的 ±随机比例(0.2=±20%,0=关闭):
+	// 打散固定周期 NOP/ping 信标。
+	KeepaliveJitter float64          `json:"keepalive_jitter" yaml:"keepalive-jitter"`
+	Users           []UserConfig     `json:"users" yaml:"users"`
+	Forwards        []ForwardConfig  `json:"forwards" yaml:"forwards"`
 }
 
 // streamIdleDuration 流级闲置掐断时长:显式配置优先(-1→0=不包裹),
@@ -126,6 +137,18 @@ func (s Section) streamIdleDuration() time.Duration {
 		return idleTimeoutDuration(s.StreamIdleTimeout)
 	}
 	return idleTimeoutDuration(s.IdleTimeout)
+}
+
+// applyFrameShaping 把帧级随机化与 keepalive 抖动参数注入 smux 配置
+// (client/server 两侧 smux 会话组装处共用)。未配置时零改动(向后兼容)。
+func applyFrameShaping(smuxConfig *smux.Config, sec Section) {
+	if sec.FrameMin > 0 && sec.FrameMax >= sec.FrameMin {
+		smuxConfig.FrameSizeMin = sec.FrameMin
+		smuxConfig.FrameSizeMax = sec.FrameMax
+	}
+	if sec.KeepaliveJitter > 0 {
+		smuxConfig.KeepAliveJitter = sec.KeepaliveJitter
+	}
 }
 
 // Config 是注册到 config 体系的顶层结构,YAML `reverse:` 节经 Reverse 字段落位。
