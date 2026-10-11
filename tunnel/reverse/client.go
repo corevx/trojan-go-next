@@ -251,7 +251,7 @@ func (l *ReverseListener) Serve(target string) error {
 	if target == "" {
 		return common.NewError("reverse serve target is empty")
 	}
-	idleTimeout := idleTimeoutDuration(l.client.cfg.IdleTimeout)
+	idleTimeout := l.client.cfg.streamIdleDuration()
 	for {
 		conn, err := l.Accept()
 		if err != nil {

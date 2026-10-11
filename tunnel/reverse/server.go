@@ -424,7 +424,7 @@ func (b *boundListener) close() {
 
 func (b *boundListener) acceptLoop() {
 	defer b.listener.Close()
-	idleTimeout := idleTimeoutDuration(b.entry.server.cfg.IdleTimeout)
+	idleTimeout := b.entry.server.cfg.streamIdleDuration()
 	for {
 		conn, err := b.listener.Accept()
 		if err != nil {

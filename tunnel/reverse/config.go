@@ -3,6 +3,7 @@ package reverse
 import (
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/p4gefau1t/trojan-go/common"
 	"github.com/p4gefau1t/trojan-go/config"
@@ -105,12 +106,26 @@ type ForwardConfig struct {
 // Section 是 reverse 节本体(trojan-go 约定:顶层节内容是注册 Config 的字段,
 // 见 shadowsocks/router 同款包装)。
 type Section struct {
-	Enabled         bool            `json:"enabled" yaml:"enabled"`
-	DefaultBindHost string          `json:"default_bind_host" yaml:"default-bind-host"`
-	IdleTimeout     int             `json:"idle_timeout" yaml:"idle-timeout"`
-	StreamBuffer    int             `json:"stream_buffer" yaml:"stream-buffer"`
-	Users           []UserConfig    `json:"users" yaml:"users"`
-	Forwards        []ForwardConfig `json:"forwards" yaml:"forwards"`
+	Enabled         bool   `json:"enabled" yaml:"enabled"`
+	DefaultBindHost string `json:"default_bind_host" yaml:"default-bind-host"`
+	IdleTimeout     int    `json:"idle_timeout" yaml:"idle-timeout"`
+	StreamBuffer    int    `json:"stream_buffer" yaml:"stream-buffer"`
+	// StreamIdleTimeout 流级闲置掐断(idleTimeoutConn),与 IdleTimeout 的
+	// session 健康检测职责(smux keepalive 间隔/ping 间隔)解耦:
+	// 0=未配置,跟随 IdleTimeout(向后兼容);-1=禁用流掐断(长连语义,
+	// 僵尸回收交由 session 死亡全量回收)。
+	StreamIdleTimeout int             `json:"stream_idle_timeout" yaml:"stream-idle-timeout"`
+	Users             []UserConfig    `json:"users" yaml:"users"`
+	Forwards          []ForwardConfig `json:"forwards" yaml:"forwards"`
+}
+
+// streamIdleDuration 流级闲置掐断时长:显式配置优先(-1→0=不包裹),
+// 未配置跟随 IdleTimeout。
+func (s Section) streamIdleDuration() time.Duration {
+	if s.StreamIdleTimeout != 0 {
+		return idleTimeoutDuration(s.StreamIdleTimeout)
+	}
+	return idleTimeoutDuration(s.IdleTimeout)
 }
 
 // Config 是注册到 config 体系的顶层结构,YAML `reverse:` 节经 Reverse 字段落位。
