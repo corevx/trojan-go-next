@@ -392,3 +392,50 @@ func TestReverseNoGoroutineLeak(t *testing.T) {
 		t.Fatalf("goroutine leak: base=%d now=%d", base, now)
 	}
 }
+
+// TestReverseListenerConnected pins the Connected() liveness surface used by
+// upstream failover watchdogs: true while bound, false after a session loss
+// (during the rebinding backoff), true again after a successful rebind, and
+// false after Close.
+func TestReverseListenerConnected(t *testing.T) {
+	stack := newTestStack(t)
+	defer stack.close(t)
+
+	port := stack.ports[0]
+	listener, err := stack.authorized.DialReverse(context.Background(), port,
+		reverse.WithTarget(util.EchoAddr),
+		reverse.WithRetry(reverse.RetryPolicy{Initial: 200 * time.Millisecond, Max: time.Second}))
+	common.Must(err)
+	defer listener.Close()
+
+	if !listener.Connected() {
+		t.Fatal("listener must report connected right after a successful bind")
+	}
+
+	if killed := stack.reverse.CloseAllSessions(); killed == 0 {
+		t.Fatal("no reverse session to kill")
+	}
+	// Session death must reflect in Connected() promptly (markDead ->
+	// maintainLoop teardown), well before the rebind completes.
+	deadline := time.Now().Add(5 * time.Second)
+	for listener.Connected() {
+		if time.Now().After(deadline) {
+			t.Fatal("Connected() stayed true after the session was killed")
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+
+	// After the listener rebinds by itself, Connected() must flip back.
+	deadline = time.Now().Add(15 * time.Second)
+	for !echoOnce(t, port, 5*time.Second) || !listener.Connected() {
+		if time.Now().After(deadline) {
+			t.Fatal("reverse listener failed to rebind (or Connected stayed false) after session loss")
+		}
+		time.Sleep(200 * time.Millisecond)
+	}
+
+	listener.Close()
+	if listener.Connected() {
+		t.Fatal("Connected() must be false after Close")
+	}
+}

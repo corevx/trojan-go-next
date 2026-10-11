@@ -7,6 +7,7 @@ import (
 	"math/rand"
 	"net"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/p4gefau1t/trojan-go/common"
@@ -192,11 +193,26 @@ type ReverseListener struct {
 	mu      sync.Mutex
 	current *reverseSession
 
+	// connected mirrors the session liveness for Connected(): true while a
+	// session is established, false while rebinding with backoff. It is the
+	// health surface an upstream failover watchdog polls — a listener stuck
+	// retrying a dead server stays alive (Done not closed) yet never becomes
+	// connected, which is exactly the state an orchestrator must treat as
+	// "give up on this server, try the next candidate".
+	connected atomic.Bool
+
 	connChan  chan net.Conn
 	ctx       context.Context
 	cancel    context.CancelFunc
 	done      chan struct{}
 	closeOnce sync.Once
+}
+
+// Connected reports whether the reverse session is currently established
+// (bound and not inside a reconnect backoff window). It does not change the
+// reconnect semantics in any way; it only exposes liveness for polling.
+func (l *ReverseListener) Connected() bool {
+	return l.connected.Load()
 }
 
 // Accept returns the next connection made to the server-side bound port
@@ -225,6 +241,7 @@ func (l *ReverseListener) Done() <-chan struct{} {
 // Close unbinds the remote port and tears down the session
 func (l *ReverseListener) Close() error {
 	l.closeOnce.Do(func() {
+		l.connected.Store(false)
 		l.cancel()
 		l.mu.Lock()
 		rs := l.current
@@ -345,6 +362,7 @@ func (l *ReverseListener) connect() error {
 	}
 	rs := l.current
 	l.mu.Unlock()
+	l.connected.Store(true)
 
 	go l.acceptLoop(rs)
 	go l.keepaliveLoop(rs)
@@ -353,6 +371,7 @@ func (l *ReverseListener) connect() error {
 
 // teardownSession drops the current session without giving up the listener
 func (l *ReverseListener) teardownSession() {
+	l.connected.Store(false)
 	l.mu.Lock()
 	rs := l.current
 	l.current = nil
