@@ -2,14 +2,27 @@ package tls
 
 import (
 	"context"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+	"crypto/sha256"
+	"crypto/x509"
+	"crypto/x509/pkix"
+	"encoding/hex"
+	"encoding/pem"
+	"math/big"
 	"net"
 	"os"
+	"path/filepath"
+	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/p4gefau1t/trojan-go/common"
 	"github.com/p4gefau1t/trojan-go/config"
 	"github.com/p4gefau1t/trojan-go/test/util"
+	"github.com/p4gefau1t/trojan-go/tunnel"
 	"github.com/p4gefau1t/trojan-go/tunnel/freedom"
 	"github.com/p4gefau1t/trojan-go/tunnel/transport"
 )
@@ -367,5 +380,140 @@ func TestMatch(t *testing.T) {
 
 	if !isDomainNameMatched("localhost", "localhost") {
 		t.Fail()
+	}
+}
+
+// certSHA256Hex 计算一张 PEM 证书的 SHA-256 指纹（hex 小写）。
+func certSHA256Hex(t *testing.T, pemStr string) string {
+	t.Helper()
+	block, _ := pem.Decode([]byte(pemStr))
+	if block == nil {
+		t.Fatal("bad test pem")
+	}
+	crt, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sum := sha256.Sum256(crt.Raw)
+	return hex.EncodeToString(sum[:])
+}
+
+// genPinTestCert 运行时生成一张自签 ECDSA 证书落盘，返回其 SHA-256 指纹。
+// （既有内置测试证书已过期，服务端侧证书加载有有效期检查。）
+func genPinTestCert(t *testing.T, certPath, keyPath string) string {
+	t.Helper()
+	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tmpl := &x509.Certificate{
+		SerialNumber: big.NewInt(1),
+		Subject:      pkix.Name{CommonName: "localhost"},
+		DNSNames:     []string{"localhost"},
+		IPAddresses:  []net.IP{net.ParseIP("127.0.0.1")},
+		NotBefore:    time.Now().Add(-time.Hour),
+		NotAfter:     time.Now().Add(24 * time.Hour),
+	}
+	der, err := x509.CreateCertificate(rand.Reader, tmpl, tmpl, &key.PublicKey, key)
+	if err != nil {
+		t.Fatal(err)
+	}
+	certOut := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: der})
+	keyDER, err := x509.MarshalECPrivateKey(key)
+	if err != nil {
+		t.Fatal(err)
+	}
+	keyOut := pem.EncodeToMemory(&pem.Block{Type: "EC PRIVATE KEY", Bytes: keyDER})
+	if err := os.WriteFile(certPath, certOut, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(keyPath, keyOut, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	sum := sha256.Sum256(der)
+	return hex.EncodeToString(sum[:])
+}
+
+// TestCertPinSHA256 证书指纹钉死：正确 pin（裸 hex 与冒号分组两种写法）
+// 握手通过；错误 pin 握手被拒。覆盖 stdlib 与 utls 两条客户端路径。
+// 证书运行时自签（既有内置测试证书 2026-09 已过期，服务端加载即拒）。
+func TestCertPinSHA256(t *testing.T) {
+	certPath := filepath.Join(t.TempDir(), "pin-test.crt")
+	keyPath := filepath.Join(t.TempDir(), "pin-test.key")
+	good := genPinTestCert(t, certPath, keyPath)
+	grouped := ""
+	for i := 0; i < len(good); i += 2 {
+		if i > 0 {
+			grouped += ":"
+		}
+		grouped += good[i : i+2]
+	}
+	bad := strings.Repeat("0", 64)
+
+	startPair := func(t *testing.T, pin, fingerprint string) (tunnel.Client, tunnel.Server) {
+		t.Helper()
+		serverCfg := &Config{
+			TLS: TLSConfig{
+				CertCheckRate: 1,
+				KeyPath:       keyPath,
+				CertPath:      certPath,
+			},
+		}
+		clientCfg := &Config{
+			TLS: TLSConfig{
+				Verify:        false,
+				SNI:           "localhost",
+				Fingerprint:   fingerprint,
+				CertPinSHA256: pin,
+			},
+		}
+		port := common.PickPort("tcp", "127.0.0.1")
+		ctx := config.WithConfig(context.Background(), transport.Name, &transport.Config{
+			LocalHost: "127.0.0.1", LocalPort: port,
+			RemoteHost: "127.0.0.1", RemotePort: port,
+		})
+		ctx = config.WithConfig(ctx, freedom.Name, &freedom.Config{})
+		tcpClient, err := transport.NewClient(ctx, nil)
+		common.Must(err)
+		tcpServer, err := transport.NewServer(ctx, nil)
+		common.Must(err)
+		s, err := NewServer(config.WithConfig(context.Background(), Name, serverCfg), tcpServer)
+		common.Must(err)
+		c, err := NewClient(config.WithConfig(context.Background(), Name, clientCfg), tcpClient)
+		common.Must(err)
+		return c, s
+	}
+
+	cases := []struct {
+		name        string
+		pin         string
+		fingerprint string
+		wantOK      bool
+	}{
+		{"good-hex", good, "", true},
+		{"good-grouped", grouped, "chrome", true},
+		{"bad-pin", bad, "", false},
+		{"bad-pin-utls", bad, "chrome", false},
+	}
+	for _, tc := range cases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			c, s := startPair(t, tc.pin, tc.fingerprint)
+			defer c.Close()
+			defer s.Close()
+			go func() { _, _ = s.AcceptConn(nil) }()
+			conn, err := c.DialConn(nil, nil)
+			if tc.wantOK {
+				if err != nil {
+					t.Fatalf("dial with correct pin should succeed: %v", err)
+				}
+				conn.Close()
+				return
+			}
+			if err == nil {
+				conn.Close()
+				t.Fatal("dial with wrong pin must fail")
+			}
+		})
 	}
 }

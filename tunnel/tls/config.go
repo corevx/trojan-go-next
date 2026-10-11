@@ -31,6 +31,7 @@ type TLSConfig struct {
 	ALPN                 []string `json:"alpn" yaml:"alpn"`
 	Curves               string   `json:"curves" yaml:"curves"`
 	Fingerprint          string   `json:"fingerprint" yaml:"fingerprint"`
+	CertPinSHA256        string   `json:"cert_pin_sha256" yaml:"cert-pin-sha256"`
 	KeyLogPath           string   `json:"key_log" yaml:"key-log"`
 	CertCheckRate        int      `json:"cert_check_rate" yaml:"cert-check-rate"`
 	MinTLSVersion        string   `json:"min_tls_version" yaml:"min-tls-version"`

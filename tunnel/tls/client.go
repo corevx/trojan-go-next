@@ -2,9 +2,12 @@ package tls
 
 import (
 	"context"
+	"crypto/sha256"
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/hex"
 	"encoding/pem"
+	"fmt"
 	"io"
 	"os"
 	"strings"
@@ -28,6 +31,7 @@ type Client struct {
 	sessionTicket bool
 	reuseSession  bool
 	fingerprint   string
+	certPin       string
 	helloID       utls.ClientHelloID
 	keyLogger     io.WriteCloser
 	underlay      tunnel.Client
@@ -61,6 +65,12 @@ func (c *Client) DialConn(_ *tunnel.Address, overlay tunnel.Tunnel) (tunnel.Conn
 		if err := tlsConn.Handshake(); err != nil {
 			return nil, common.NewError("tls failed to handshake with remote server").Base(err)
 		}
+		if c.certPin != "" {
+			if err := verifyCertPin(tlsConn.ConnectionState().PeerCertificates, c.certPin); err != nil {
+				_ = conn.Close()
+				return nil, common.NewError("tls certificate pin verification failed").Base(err)
+			}
+		}
 		return &transport.Conn{
 			Conn: tlsConn,
 		}, nil
@@ -77,6 +87,12 @@ func (c *Client) DialConn(_ *tunnel.Address, overlay tunnel.Tunnel) (tunnel.Conn
 	err = tlsConn.Handshake()
 	if err != nil {
 		return nil, common.NewError("tls failed to handshake with remote server").Base(err)
+	}
+	if c.certPin != "" {
+		if err := verifyCertPin(tlsConn.ConnectionState().PeerCertificates, c.certPin); err != nil {
+			_ = conn.Close()
+			return nil, common.NewError("tls certificate pin verification failed").Base(err)
+		}
 	}
 	return &transport.Conn{
 		Conn: tlsConn,
@@ -114,6 +130,7 @@ func NewClient(ctx context.Context, underlay tunnel.Client) (*Client, error) {
 		cipher:        fingerprint.ParseCipher(strings.Split(cfg.TLS.Cipher, ":")),
 		sessionTicket: cfg.TLS.ReuseSession,
 		fingerprint:   cfg.TLS.Fingerprint,
+		certPin:       normalizeCertPin(cfg.TLS.CertPinSHA256),
 		helloID:       helloID,
 	}
 
@@ -154,4 +171,31 @@ func NewClient(ctx context.Context, underlay tunnel.Client) (*Client, error) {
 
 	log.Debug("tls client created")
 	return client, nil
+}
+
+// normalizeCertPin 归一化配置写入的证书指纹：去冒号、转小写。接受
+// "aa:bb:..." 冒号分组写法与裸 hex 两种形态；空串原样返回（未启用 pin）。
+func normalizeCertPin(pin string) string {
+	pin = strings.ToLower(strings.TrimSpace(strings.ReplaceAll(pin, ":", "")))
+	if pin == "" {
+		return ""
+	}
+	log.Info("tls certificate pin enabled")
+	return pin
+}
+
+// verifyCertPin 校验服务端证书链叶子证书的 SHA-256 指纹与钉死值一致。
+// 场景：自签证书（Verify=false 无法走链校验）下钉死身份防 MITM——比裸关
+// 校验安全，比装 CA 简单。certs 为空视为失败（匿名/异常握手）。
+func verifyCertPin(certs []*x509.Certificate, pin string) error {
+	if len(certs) == 0 {
+		return common.NewError("no peer certificate presented to pin against")
+	}
+	sum := sha256.Sum256(certs[0].Raw)
+	got := hex.EncodeToString(sum[:])
+	if got != pin {
+		return fmt.Errorf("peer certificate sha256 %s does not match pinned %s", got, pin)
+	}
+	log.Info("tls certificate pin verified")
+	return nil
 }
