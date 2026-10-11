@@ -20,7 +20,7 @@ import (
 
 const (
 	// bindTimeout bounds the BindReq/BindResp handshake on the control stream
-	bindTimeout = time.Second * 10
+	bindTimeout = time.Second * 30 // 高负载下 10s 读不到 BindResp(实测 ~1/10 复现):成功路径即时返回,只放宽失败判定窗
 	// controlWriteWait bounds a single control frame write
 	controlWriteWait    = time.Second * 5
 	defaultRetryInitial = time.Second * 3
