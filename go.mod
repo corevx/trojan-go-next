@@ -43,4 +43,9 @@ require (
 	inet.af/netaddr v0.0.0-20210903134321-85fa6c94624e // indirect
 )
 
-replace github.com/xtaci/smux => ./third_party/smux
+// 仅对本仓自身构建生效（Go 只在主模块应用 replace）；
+// frpbin 消费本模块时忽略此行，其 go.mod 的双 replace 才是生效面。
+// third_party/smux 目录保留作历史留档，不再被 replace 引用。
+// smux 独立仓：git.toimc.com/toimc/smux（fork 自 xtaci/smux v1.5.57，
+// 定制：帧切分随机 + keepalive 抖动，见该仓 README）。
+replace github.com/xtaci/smux => git.toimc.com/toimc/smux v1.5.57-frameshape.1
