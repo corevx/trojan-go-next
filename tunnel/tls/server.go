@@ -155,6 +155,10 @@ func (s *Server) acceptLoop() {
 			}
 
 			log.Info("tls connection from", conn.RemoteAddr())
+			// 握手已成功：回落判定点已过，握手层缓冲里的 ClientHello
+			// 副本是死数据，释放 2KB 嗅探缓冲防其随连接常驻（#6）。
+			// 之后 tlsConn 经此 conn 的读写直接透传底层连接，行为不变。
+			handshakeRewindConn.Release()
 			state := tlsConn.ConnectionState()
 			log.Trace("tls handshake", tls.CipherSuiteName(state.CipherSuite), state.DidResume, state.NegotiatedProtocol)
 
