@@ -39,6 +39,7 @@ func TestTransport(t *testing.T) {
 	wg.Add(1)
 	var conn1, conn2 net.Conn
 	go func() {
+		var err error
 		conn2, err = s.AcceptConn(nil)
 		common.Must(err)
 		wg.Done()

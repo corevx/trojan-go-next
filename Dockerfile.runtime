@@ -1,0 +1,25 @@
+# Runtime-only image for locally cross-compiled binaries.
+# The full multi-stage Dockerfile cannot fetch private modules
+# (git.toimc.com/toimc/smux) inside the container, so build locally first:
+#
+#   CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -tags "full" -trimpath \
+#     -ldflags "-s -w -X github.com/p4gefau1t/trojan-go/constant.Version=<ver> \
+#     -X github.com/p4gefau1t/trojan-go/constant.Commit=<sha>" \
+#     -o build/trojan-go-next .
+#   make download-geo   # or fetch geo*.dat manually (see Makefile)
+#
+#   docker build -f Dockerfile.runtime -t trojan-go-next:<ver> build/
+
+FROM alpine:3.20
+
+RUN apk add --no-cache tzdata ca-certificates
+
+WORKDIR /etc/trojan-go
+
+COPY trojan-go-next /usr/local/bin/trojan-go-next
+COPY geo*.dat /etc/trojan-go/
+
+EXPOSE 443 8443
+
+ENTRYPOINT ["/usr/local/bin/trojan-go-next", "-config"]
+CMD ["/etc/trojan-go/config.json"]

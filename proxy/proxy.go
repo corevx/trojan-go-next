@@ -2,12 +2,14 @@ package proxy
 
 import (
 	"context"
+	"errors"
 	"io"
 	"math/rand"
 	"net"
 	"os"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/p4gefau1t/trojan-go/common"
@@ -134,34 +136,40 @@ func (p *Proxy) relayPacketLoop() {
 					}
 					defer outbound.Close()
 					errChan := make(chan error, 2)
-			copyPacket := func(a, b tunnel.PacketConn) {
-					for {
-						buf := bufPool.Get().([]byte)
-						n, metadata, err := a.ReadWithMetadata(buf)
-						if err != nil {
+					copyPacket := func(a, b tunnel.PacketConn) {
+						for {
+							buf := bufPool.Get().([]byte)
+							n, metadata, err := a.ReadWithMetadata(buf)
+							if err != nil {
+								bufPool.Put(buf)
+								errChan <- err
+								return
+							}
+							if n == 0 {
+								bufPool.Put(buf)
+								errChan <- nil
+								return
+							}
+							_, err = b.WriteWithMetadata(buf[:n], metadata)
 							bufPool.Put(buf)
-							errChan <- err
-							return
-						}
-						if n == 0 {
-							bufPool.Put(buf)
-							errChan <- nil
-							return
-						}
-						_, err = b.WriteWithMetadata(buf[:n], metadata)
-						bufPool.Put(buf)
-						if err != nil {
-							errChan <- err
-							return
+							if err != nil {
+								errChan <- err
+								return
+							}
 						}
 					}
-				}
 					go copyPacket(inbound, outbound)
 					go copyPacket(outbound, inbound)
 					select {
 					case err = <-errChan:
 						if err != nil {
-							log.Error(err)
+							if isPacketSessionClose(err) {
+								// the peer closing the session is the normal way
+								// UDP-over-stream relays end, not a relay failure
+								log.Debug("packet relay ends with session close:", err)
+							} else {
+								log.Error(err)
+							}
 						}
 					case <-p.ctx.Done():
 						log.Debug("shutting down packet relay")
@@ -171,6 +179,34 @@ func (p *Proxy) relayPacketLoop() {
 			}
 		}(source)
 	}
+}
+
+// isPacketSessionClose reports whether err is the normal termination of a
+// UDP-over-stream relay session instead of a genuine relay failure: trojan UDP
+// sessions have no explicit teardown message, so the peer closing the
+// underlying connection (io.EOF, connection reset) or a local shutdown
+// (net.ErrClosed) is the expected way they end.
+//
+// common.Error flattens wrapped errors into a string and does not implement
+// Unwrap, so errors.Is alone cannot see through it; fall back to suffix
+// matching for the flattened forms.
+func isPacketSessionClose(err error) bool {
+	if err == nil {
+		return false
+	}
+	if errors.Is(err, io.EOF) ||
+		errors.Is(err, net.ErrClosed) ||
+		errors.Is(err, syscall.ECONNRESET) {
+		return true
+	}
+	msg := err.Error()
+	// " | EOF" must not match "unexpected EOF", which means a truncated frame
+	for _, suffix := range []string{" | EOF", "use of closed network connection", "connection reset by peer"} {
+		if strings.HasSuffix(msg, suffix) {
+			return true
+		}
+	}
+	return false
 }
 
 func NewProxy(ctx context.Context, cancel context.CancelFunc, sources []tunnel.Server, sink tunnel.Client) *Proxy {
