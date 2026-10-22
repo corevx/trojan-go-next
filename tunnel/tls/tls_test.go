@@ -11,6 +11,7 @@ import (
 	"crypto/x509/pkix"
 	"encoding/hex"
 	"encoding/pem"
+	"fmt"
 	"math/big"
 	"net"
 	"os"
@@ -308,6 +309,99 @@ func TestMatch(t *testing.T) {
 	if !isDomainNameMatched("localhost", "localhost") {
 		t.Fail()
 	}
+}
+
+// TestSilentConnClosedByDeadline 缺陷回归（P0）：建 TCP 连接后不发任何字节，
+// 服务端 TLS 握手读此前无任何 deadline，静默连接会永久占用 per-conn goroutine。
+// 修复后握手 + HTTP 请求读取阶段受 handshakeTimeout 限制：超时连接被服务端
+// 关闭（客户端读到 EOF/RST 而非自己超时）；正常握手路径的 deadline 会被清除，
+// 空闲超过 handshakeTimeout 的长连接仍可正常收发。
+func TestSilentConnClosedByDeadline(t *testing.T) {
+	origTimeout := handshakeTimeout
+	handshakeTimeout = time.Second
+	defer func() { handshakeTimeout = origTimeout }()
+
+	certPath := filepath.Join(t.TempDir(), "silent-conn.crt")
+	keyPath := filepath.Join(t.TempDir(), "silent-conn.key")
+	genRSATestCert(t, certPath, keyPath)
+
+	serverCfg := &Config{
+		TLS: TLSConfig{
+			VerifyHostName: true,
+			KeyPath:        keyPath,
+			CertPath:       certPath,
+		},
+	}
+	clientCfg := &Config{
+		TLS: TLSConfig{
+			Verify: false,
+			SNI:    "localhost",
+		},
+	}
+	sctx := config.WithConfig(context.Background(), Name, serverCfg)
+	cctx := config.WithConfig(context.Background(), Name, clientCfg)
+
+	port := common.PickPort("tcp", "127.0.0.1")
+	transportConfig := &transport.Config{
+		LocalHost:  "127.0.0.1",
+		LocalPort:  port,
+		RemoteHost: "127.0.0.1",
+		RemotePort: port,
+	}
+	ctx := config.WithConfig(context.Background(), transport.Name, transportConfig)
+	ctx = config.WithConfig(ctx, freedom.Name, &freedom.Config{})
+	tcpClient, err := transport.NewClient(ctx, nil)
+	common.Must(err)
+	tcpServer, err := transport.NewServer(ctx, nil)
+	common.Must(err)
+	// 注意顺序：handshakeTimeout 已在 NewServer 之前改写（goroutine 创建
+	// 提供 happens-before），defer 恢复放在 Close 之后执行
+	s, err := NewServer(sctx, tcpServer)
+	common.Must(err)
+	c, err := NewClient(cctx, tcpClient)
+	common.Must(err)
+	defer c.Close()
+	defer s.Close()
+
+	// 1) 静默连接：不发任何字节。客户端读超时给 5s（> 服务端 1s deadline），
+	//    若服务端按期关闭则读到 EOF/RST；若客户端超时先触发说明修复回归。
+	silent, err := net.Dial("tcp", fmt.Sprintf("127.0.0.1:%d", port))
+	common.Must(err)
+	defer silent.Close()
+	silent.SetReadDeadline(time.Now().Add(5 * time.Second))
+	buf := [1]byte{}
+	_, rerr := silent.Read(buf[:])
+	if rerr == nil {
+		t.Fatal("silent conn read unexpectedly got data")
+	}
+	if ne, ok := rerr.(net.Error); ok && ne.Timeout() {
+		t.Fatalf("silent conn not closed by server within 5s, client read timed out first: %v", rerr)
+	}
+
+	// 2) 正常路径不受影响：握手→首包→空闲超过 handshakeTimeout→仍可收发
+	var conn2 tunnel.Conn
+	accepted := make(chan struct{})
+	go func() {
+		var aerr error
+		conn2, aerr = s.AcceptConn(nil)
+		if aerr != nil {
+			panic(aerr)
+		}
+		close(accepted)
+	}()
+	conn1, err := c.DialConn(nil, nil)
+	common.Must(err)
+	common.Must2(conn1.Write([]byte("12345678\r\n")))
+	<-accepted
+	// 消费 rewind 重放的首包（与既有测试一致），后续 CheckConn 才是干净流
+	rbuf := [10]byte{}
+	conn2.Read(rbuf[:])
+	time.Sleep(1500 * time.Millisecond) // 空闲超过 handshakeTimeout(1s)
+	if !util.CheckConn(conn1, conn2) {
+		t.Fatal("normal conn unusable after idle > handshakeTimeout, deadline not cleared")
+	}
+	conn1.Close()
+	conn2.Close()
 }
 
 // certSHA256Hex 计算一张 PEM 证书的 SHA-256 指纹（hex 小写）。

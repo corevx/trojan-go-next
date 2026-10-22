@@ -27,6 +27,12 @@ import (
 	"github.com/p4gefau1t/trojan-go/tunnel/websocket"
 )
 
+// handshakeTimeout 限制单条入站连接在「TLS 握手 + HTTP 请求行读取」阶段的
+// 总停留时长：静默连接（不发 ClientHello / 发半个 / 握手完成但不发请求）
+// 到期被强断，防止 per-conn goroutine 永久卡死。协议层接管前会清除 deadline。
+// 包级变量便于测试注入短超时。
+var handshakeTimeout = 30 * time.Second
+
 func parseTLSVersion(v string) uint16 {
 	switch strings.ToLower(v) {
 	case "1.3":
@@ -122,9 +128,9 @@ func (s *Server) acceptLoop() {
 							break
 						}
 					}
-			if s.verifySNI && !matched {
-					return nil, common.NewError("sni mismatched: " + hello.ServerName + ", expected: " + sni + " or one of " + strings.Join(dnsNames, ", "))
-				}
+					if s.verifySNI && !matched {
+						return nil, common.NewError("sni mismatched: " + hello.ServerName + ", expected: " + sni + " or one of " + strings.Join(dnsNames, ", "))
+					}
 					return &s.keyPair[0], nil
 				},
 			}
@@ -133,6 +139,10 @@ func (s *Server) acceptLoop() {
 
 			handshakeRewindConn := common.NewRewindConn(conn)
 			handshakeRewindConn.SetBufferSize(2048)
+			// 静默连接保护：握手 + HTTP 请求读取阶段限时，防止不发
+			// ClientHello（或握手后不发请求）的连接永久卡死本 goroutine。
+			// RewindConn 内嵌 net.Conn，SetDeadline 直接透传到底层连接。
+			handshakeRewindConn.SetDeadline(time.Now().Add(handshakeTimeout))
 
 			tlsConn := tls.Server(handshakeRewindConn, tlsConfig)
 			err = tlsConn.Handshake()
@@ -145,6 +155,8 @@ func (s *Server) acceptLoop() {
 					log.Error(common.NewError("failed to perform tls handshake with " + tlsConn.RemoteAddr().String() + ", redirecting").Base(err))
 					switch {
 					case s.fallbackAddress != nil:
+						// fallback 会话不受握手限时约束
+						handshakeRewindConn.SetDeadline(time.Time{})
 						s.redir.Redirect(&redirector.Redirection{
 							InboundConn: handshakeRewindConn,
 							RedirectTo:  s.fallbackAddress,
@@ -170,14 +182,24 @@ func (s *Server) acceptLoop() {
 			// we use a real http header parser to mimic a real http server
 			rewindConn := common.NewRewindConn(tlsConn)
 			rewindConn.SetBufferSize(1024)
+			// 握手已完成，为 HTTP 请求读取阶段重置完整时限
+			handshakeRewindConn.SetDeadline(time.Now().Add(handshakeTimeout))
 			r := bufio.NewReader(rewindConn)
 			httpReq, err := http.ReadRequest(r)
 			rewindConn.Rewind()
 			rewindConn.StopBuffering()
+			// 协议识别完毕，后续 trojan/websocket 层自管超时，清除 deadline
+			handshakeRewindConn.SetDeadline(time.Time{})
 			if err != nil {
 				// this is not a http request. pass it to trojan protocol layer for further inspection
-				s.connChan <- &transport.Conn{
+				select {
+				case s.connChan <- &transport.Conn{
 					Conn: rewindConn,
+				}:
+				case <-s.ctx.Done():
+					log.Debug("tls server closing, discarding conn")
+					rewindConn.Close()
+					return
 				}
 			} else {
 				if atomic.LoadInt32(&s.nextHTTP) != 1 {
@@ -191,8 +213,14 @@ func (s *Server) acceptLoop() {
 				}
 				// this is a http request, pass it to websocket protocol layer
 				log.Debug("http req: ", httpReq)
-				s.wsChan <- &transport.Conn{
+				select {
+				case s.wsChan <- &transport.Conn{
 					Conn: rewindConn,
+				}:
+				case <-s.ctx.Done():
+					log.Debug("tls server closing, discarding conn")
+					rewindConn.Close()
+					return
 				}
 			}
 		}(conn)

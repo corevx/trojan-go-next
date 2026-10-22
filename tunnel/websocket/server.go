@@ -87,7 +87,9 @@ func (s *Server) AcceptConn(tunnel.Tunnel) (tunnel.Conn, error) {
 		return nil, common.NewError("not a valid websocket handshake request: " + conn.RemoteAddr().String()).Base(err)
 	}
 
-	handshake := make(chan struct{})
+	// 缓冲 1：Handler 的发送永不阻塞——即使 AcceptConn 已超时返回，
+	// Handler 也不会卡死在无缓冲发送上，ServeHTTP 得以返回并释放连接
+	handshake := make(chan struct{}, 1)
 
 	url := "wss://" + s.hostname + s.path
 	origin := "https://" + s.hostname
@@ -121,15 +123,23 @@ func (s *Server) AcceptConn(tunnel.Tunnel) (tunnel.Conn, error) {
 		Conn:       conn,
 		ReadWriter: rw,
 	}
-	go wsServer.ServeHTTP(respWriter, req)
+	// ServeHTTP 无论正常完成还是因畸形握手请求静默退出，都立即通知 AcceptConn
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		wsServer.ServeHTTP(respWriter, req)
+	}()
 
 	select {
 	case <-handshake:
+	case <-done:
 	case <-time.After(s.timeout):
 	}
 
 	if wsConn == nil {
 		cancel()
+		// ServeHTTP 可能仍在运行（真超时）或已异常退出，兜底关闭连接防 fd 泄漏
+		rewindConn.Close()
 		return nil, common.NewError("websocket failed to handshake")
 	}
 
