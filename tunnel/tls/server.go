@@ -56,20 +56,24 @@ type Server struct {
 	PreferServerCipher bool
 	keyPair            []tls.Certificate
 	keyPairLock        sync.RWMutex
-	httpResp           []byte
-	cipherSuite        []uint16
-	sessionTicket      bool
-	curve              []tls.CurveID
-	keyLogger          io.WriteCloser
-	minTLSVersion      uint16
-	connChan           chan tunnel.Conn
-	wsChan             chan tunnel.Conn
-	redir              *redirector.Redirector
-	ctx                context.Context
-	cancel             context.CancelFunc
-	underlay           tunnel.Server
-	nextHTTP           int32
-	portOverrider      map[string]int
+	// tlsConfig is built once at NewServer and shared by all connections:
+	// per-connection configs would give each handshake its own session
+	// ticket key space, silently breaking session resumption.
+	tlsConfig     *tls.Config
+	httpResp      []byte
+	cipherSuite   []uint16
+	sessionTicket bool
+	curve         []tls.CurveID
+	keyLogger     io.WriteCloser
+	minTLSVersion uint16
+	connChan      chan tunnel.Conn
+	wsChan        chan tunnel.Conn
+	redir         *redirector.Redirector
+	ctx           context.Context
+	cancel        context.CancelFunc
+	underlay      tunnel.Server
+	nextHTTP      int32
+	portOverrider map[string]int
 }
 
 func (s *Server) Close() error {
@@ -106,35 +110,6 @@ func (s *Server) acceptLoop() {
 					log.Error(common.NewError("panic in tls acceptLoop goroutine").Base(fmt.Errorf("%v", r)))
 				}
 			}()
-			tlsConfig := &tls.Config{
-				MinVersion:               s.minTLSVersion,
-				CipherSuites:             s.cipherSuite,
-				PreferServerCipherSuites: s.PreferServerCipher,
-				SessionTicketsDisabled:   !s.sessionTicket,
-				NextProtos:               s.alpn,
-				KeyLogWriter:             s.keyLogger,
-				GetCertificate: func(hello *tls.ClientHelloInfo) (*tls.Certificate, error) {
-					s.keyPairLock.RLock()
-					defer s.keyPairLock.RUnlock()
-					sni := s.keyPair[0].Leaf.Subject.CommonName
-					dnsNames := s.keyPair[0].Leaf.DNSNames
-					if s.sni != "" {
-						sni = s.sni
-					}
-					matched := isDomainNameMatched(sni, hello.ServerName)
-					for _, name := range dnsNames {
-						if isDomainNameMatched(name, hello.ServerName) {
-							matched = true
-							break
-						}
-					}
-					if s.verifySNI && !matched {
-						return nil, common.NewError("sni mismatched: " + hello.ServerName + ", expected: " + sni + " or one of " + strings.Join(dnsNames, ", "))
-					}
-					return &s.keyPair[0], nil
-				},
-			}
-
 			// ------------------------ WAR ZONE ----------------------------
 
 			handshakeRewindConn := common.NewRewindConn(conn)
@@ -144,7 +119,7 @@ func (s *Server) acceptLoop() {
 			// RewindConn 内嵌 net.Conn，SetDeadline 直接透传到底层连接。
 			handshakeRewindConn.SetDeadline(time.Now().Add(handshakeTimeout))
 
-			tlsConn := tls.Server(handshakeRewindConn, tlsConfig)
+			tlsConn := tls.Server(handshakeRewindConn, s.tlsConfig)
 			err = tlsConn.Handshake()
 			handshakeRewindConn.StopBuffering()
 
@@ -431,6 +406,38 @@ func NewServer(ctx context.Context, underlay tunnel.Server) (*Server, error) {
 		minTLSVersion:      minVersion,
 		ctx:                ctx,
 		cancel:             cancel,
+	}
+
+	// one shared config for all connections: session ticket keys live in the
+	// tls.Config instance, so per-connection configs would make every ticket
+	// issued under one connection useless to the next (resumption never works)
+	server.tlsConfig = &tls.Config{
+		MinVersion:               minVersion,
+		CipherSuites:             cipherSuite,
+		PreferServerCipherSuites: cfg.TLS.PreferServerCipher,
+		SessionTicketsDisabled:   !cfg.TLS.ReuseSession,
+		NextProtos:               cfg.TLS.ALPN,
+		KeyLogWriter:             keyLogger,
+		GetCertificate: func(hello *tls.ClientHelloInfo) (*tls.Certificate, error) {
+			server.keyPairLock.RLock()
+			defer server.keyPairLock.RUnlock()
+			sni := server.keyPair[0].Leaf.Subject.CommonName
+			dnsNames := server.keyPair[0].Leaf.DNSNames
+			if server.sni != "" {
+				sni = server.sni
+			}
+			matched := isDomainNameMatched(sni, hello.ServerName)
+			for _, name := range dnsNames {
+				if isDomainNameMatched(name, hello.ServerName) {
+					matched = true
+					break
+				}
+			}
+			if server.verifySNI && !matched {
+				return nil, common.NewError("sni mismatched: " + hello.ServerName + ", expected: " + sni + " or one of " + strings.Join(dnsNames, ", "))
+			}
+			return &server.keyPair[0], nil
+		},
 	}
 
 	go server.acceptLoop()
