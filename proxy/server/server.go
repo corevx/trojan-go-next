@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 
+	"github.com/p4gefau1t/trojan-go/common"
 	"github.com/p4gefau1t/trojan-go/config"
 	"github.com/p4gefau1t/trojan-go/proxy"
 	"github.com/p4gefau1t/trojan-go/proxy/client"
@@ -11,6 +12,7 @@ import (
 	"github.com/p4gefau1t/trojan-go/tunnel/reverse"
 	"github.com/p4gefau1t/trojan-go/tunnel/router"
 	"github.com/p4gefau1t/trojan-go/tunnel/shadowsocks"
+	"github.com/p4gefau1t/trojan-go/tunnel/shadowtls"
 	"github.com/p4gefau1t/trojan-go/tunnel/simplesocks"
 	"github.com/p4gefau1t/trojan-go/tunnel/tls"
 	"github.com/p4gefau1t/trojan-go/tunnel/transport"
@@ -42,7 +44,21 @@ func init() {
 			Server:     transportServer,
 		}
 
-		if !cfg.TransportPlugin.Enabled {
+		// shadowtls 形态：transport→shadowtls→(shadowsocks)→trojan。
+		// 外层 TLS 由真站握手中继提供，不再插入 tls 层，也没有 websocket 分流树。
+		stlsCfg, _ := config.FromContext(ctx, shadowtls.Name).(*shadowtls.Config)
+		stlsEnabled := stlsCfg != nil && stlsCfg.ShadowTLS.Enabled
+		if stlsEnabled {
+			if cfg.TransportPlugin.Enabled {
+				cancel()
+				return nil, common.NewError("shadowtls 与 transport-plugin 互斥：插件工作在明文模式，与真站握手中继语义冲突")
+			}
+			if cfg.Websocket.Enabled {
+				cancel()
+				return nil, common.NewError("shadowtls 与 websocket 互斥：shadowtls 栈组合固定为 transport→shadowtls→trojan，无 WS 分流树")
+			}
+			root = root.BuildNext(shadowtls.Name)
+		} else if !cfg.TransportPlugin.Enabled {
 			root = root.BuildNext(tls.Name)
 		}
 
@@ -54,13 +70,16 @@ func init() {
 		trojanNode.BuildNext(mux.Name).BuildNext(simplesocks.Name).IsEndpoint = true
 		trojanNode.IsEndpoint = true
 
-		wsSubTree := root.BuildNext(websocket.Name)
-		if cfg.Shadowsocks.Enabled {
-			wsSubTree = wsSubTree.BuildNext(shadowsocks.Name)
+		var wsTrojanNode *proxy.Node
+		if !stlsEnabled {
+			wsSubTree := root.BuildNext(websocket.Name)
+			if cfg.Shadowsocks.Enabled {
+				wsSubTree = wsSubTree.BuildNext(shadowsocks.Name)
+			}
+			wsTrojanNode = wsSubTree.BuildNext(trojan.Name)
+			wsTrojanNode.BuildNext(mux.Name).BuildNext(simplesocks.Name).IsEndpoint = true
+			wsTrojanNode.IsEndpoint = true
 		}
-		wsTrojanNode := wsSubTree.BuildNext(trojan.Name)
-		wsTrojanNode.BuildNext(mux.Name).BuildNext(simplesocks.Name).IsEndpoint = true
-		wsTrojanNode.IsEndpoint = true
 
 		serverList := proxy.FindAllEndpoints(root)
 		clientList, err := proxy.CreateClientStack(ctx, clientStack)
@@ -78,8 +97,11 @@ func init() {
 				return nil, err
 			}
 			// both trojan servers (direct TLS path and websocket path) share
-			// the same port ownership registry
-			reverseServer.ListenOn(wsTrojanNode.Server)
+			// the same port ownership registry; the shadowtls form has no
+			// websocket branch, so the direct trojan node is the only listener
+			if !stlsEnabled {
+				reverseServer.ListenOn(wsTrojanNode.Server)
+			}
 		}
 		return proxy.NewProxy(ctx, cancel, serverList, clientList), nil
 	})
