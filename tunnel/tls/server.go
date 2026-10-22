@@ -230,6 +230,15 @@ func (s *Server) checkKeyPairLoop(checkRate time.Duration, keyPath string, certP
 	defer ticker.Stop()
 
 	for {
+		// wait at the top of the loop so that error paths below, which use
+		// continue, are also paced by the ticker instead of spinning
+		select {
+		case <-ticker.C:
+		case <-s.ctx.Done():
+			log.Debug("exiting")
+			return
+		}
+
 		log.Debug("checking cert...")
 		keyBytes, err := os.ReadFile(keyPath)
 		if err != nil {
@@ -253,14 +262,6 @@ func (s *Server) checkKeyPairLoop(checkRate time.Duration, keyPath string, certP
 			s.keyPairLock.Unlock()
 			lastKeyBytes = keyBytes
 			lastCertBytes = certBytes
-		}
-
-		select {
-		case <-ticker.C:
-			continue
-		case <-s.ctx.Done():
-			log.Debug("exiting")
-			return
 		}
 	}
 }
