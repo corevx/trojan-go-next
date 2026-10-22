@@ -3,9 +3,8 @@ FROM golang:1.26-alpine AS builder
 RUN apk add --no-cache git make curl
 
 WORKDIR /src
-COPY go.mod go.sum ./
-RUN GOPROXY=https://goproxy.cn,direct go mod download
-
+# dependencies are vendored (vendor/ is committed) — no network fetch needed;
+# private modules (git.toimc.com) cannot be fetched inside CI or the container
 COPY . .
 
 ARG VERSION=dev
