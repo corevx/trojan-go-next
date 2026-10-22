@@ -20,23 +20,33 @@ import (
 
 const Name = "CLIENT"
 
+// StackOptions 描述出站协议栈各可选层的启用组合，替代原先五个
+// 位置参数的 bool 串（调用点可读性差且易错位）。
+type StackOptions struct {
+	TransportPlugin bool
+	Mux             bool
+	Websocket       bool
+	Shadowsocks     bool
+	Router          bool
+}
+
 // GenerateClientTree generate general outbound protocol stack
-func GenerateClientTree(transportPlugin bool, muxEnabled bool, wsEnabled bool, ssEnabled bool, routerEnabled bool) []string {
+func GenerateClientTree(opts StackOptions) []string {
 	clientStack := []string{transport.Name}
-	if !transportPlugin {
+	if !opts.TransportPlugin {
 		clientStack = append(clientStack, tls.Name)
 	}
-	if wsEnabled {
+	if opts.Websocket {
 		clientStack = append(clientStack, websocket.Name)
 	}
-	if ssEnabled {
+	if opts.Shadowsocks {
 		clientStack = append(clientStack, shadowsocks.Name)
 	}
 	clientStack = append(clientStack, trojan.Name)
-	if muxEnabled {
+	if opts.Mux {
 		clientStack = append(clientStack, []string{mux.Name, simplesocks.Name}...)
 	}
-	if routerEnabled {
+	if opts.Router {
 		clientStack = append(clientStack, router.Name)
 	}
 	return clientStack
@@ -62,7 +72,13 @@ func init() {
 		root.BuildNext(http.Name).IsEndpoint = true
 		root.BuildNext(socks.Name).IsEndpoint = true
 
-		clientStack := GenerateClientTree(cfg.TransportPlugin.Enabled, cfg.Mux.Enabled, cfg.Websocket.Enabled, cfg.Shadowsocks.Enabled, cfg.Router.Enabled)
+		clientStack := GenerateClientTree(StackOptions{
+			TransportPlugin: cfg.TransportPlugin.Enabled,
+			Mux:             cfg.Mux.Enabled,
+			Websocket:       cfg.Websocket.Enabled,
+			Shadowsocks:     cfg.Shadowsocks.Enabled,
+			Router:          cfg.Router.Enabled,
+		})
 		c, err := proxy.CreateClientStack(ctx, clientStack)
 		if err != nil {
 			cancel()
