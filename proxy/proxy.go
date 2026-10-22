@@ -19,9 +19,7 @@ import (
 	"github.com/p4gefau1t/trojan-go/tunnel"
 )
 
-var (
-	activeConns = metric.RegisterGauge("trojan_active_connections", "Number of currently active connections")
-)
+var activeConns = metric.RegisterGauge("trojan_active_connections", "Number of currently active connections")
 
 var bufPool = sync.Pool{
 	New: func() interface{} {

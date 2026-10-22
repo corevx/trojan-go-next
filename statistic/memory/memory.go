@@ -6,12 +6,11 @@ import (
 	"sync/atomic"
 	"time"
 
-	"golang.org/x/time/rate"
-
 	"github.com/p4gefau1t/trojan-go/common"
 	"github.com/p4gefau1t/trojan-go/config"
 	"github.com/p4gefau1t/trojan-go/log"
 	"github.com/p4gefau1t/trojan-go/statistic"
+	"golang.org/x/time/rate"
 )
 
 const Name = "MEMORY"

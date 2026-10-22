@@ -9,13 +9,12 @@ import (
 	"testing"
 	"time"
 
-	utls "github.com/refraction-networking/utls"
-
 	"github.com/p4gefau1t/trojan-go/common"
 	"github.com/p4gefau1t/trojan-go/config"
 	"github.com/p4gefau1t/trojan-go/tunnel"
 	"github.com/p4gefau1t/trojan-go/tunnel/freedom"
 	"github.com/p4gefau1t/trojan-go/tunnel/transport"
+	utls "github.com/refraction-networking/utls"
 )
 
 // startSessionStack 起 transport+tls 服务端与指定配置的 tls 客户端，

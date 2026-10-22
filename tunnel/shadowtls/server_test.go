@@ -22,11 +22,10 @@ import (
 	"testing"
 	"time"
 
-	utls "github.com/refraction-networking/utls"
-
 	"github.com/p4gefau1t/trojan-go/common"
 	"github.com/p4gefau1t/trojan-go/config"
 	"github.com/p4gefau1t/trojan-go/tunnel"
+	utls "github.com/refraction-networking/utls"
 )
 
 // ---------------------------------------------------------------------------

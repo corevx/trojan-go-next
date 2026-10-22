@@ -28,11 +28,10 @@ import (
 	"testing"
 	"time"
 
-	netproxy "golang.org/x/net/proxy"
-
 	"github.com/p4gefau1t/trojan-go/common"
 	"github.com/p4gefau1t/trojan-go/log"
 	"github.com/p4gefau1t/trojan-go/proxy"
+	netproxy "golang.org/x/net/proxy"
 )
 
 const (
