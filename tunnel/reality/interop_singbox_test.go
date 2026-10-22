@@ -283,6 +283,18 @@ func TestInteropSingboxReality(t *testing.T) {
 		if err := roundtrip(t, stack, echoAddr); err != nil {
 			t.Fatalf("roundtrip failed: %v", err)
 		}
+		// 并发往返：同一 Client 多路并行 REALITY 握手（-race 下检验
+		// Client 只读字段与每连接 verifier 的隔离性）。
+		const workers = 4
+		errCh := make(chan error, workers)
+		for i := 0; i < workers; i++ {
+			go func() { errCh <- roundtrip(t, stack, echoAddr) }()
+		}
+		for i := 0; i < workers; i++ {
+			if err := <-errCh; err != nil {
+				t.Fatalf("concurrent roundtrip failed: %v", err)
+			}
+		}
 	})
 
 	t.Run("wrong short-id is rejected", func(t *testing.T) {
