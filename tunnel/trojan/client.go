@@ -23,6 +23,10 @@ const (
 	MaxPacketSize = 1024 * 8
 )
 
+// headerFlushDelay 拨号后若应用层迟迟不写首包，等这么久仍无写入就把裸
+// trojan 头冲出去（对端可能在等服务端先发数据，头不发出对端永远读不到）。
+const headerFlushDelay = time.Millisecond * 100
+
 const (
 	Connect   tunnel.Command = 1
 	Associate tunnel.Command = 3
@@ -130,10 +134,16 @@ func (c *Client) DialConn(addr *tunnel.Address, overlay tunnel.Tunnel) (tunnel.C
 	}
 
 	go func(newConn *OutboundConn) {
-		// if the trojan header is still buffered after 100 ms, the client may expect data from the server
-		// so we flush the trojan header
-		time.Sleep(time.Millisecond * 100)
-		newConn.WriteHeader(nil)
+		// if the trojan header is still buffered after the delay, the client may expect data from the server
+		// so we flush the trojan header. waits on the client context so a
+		// closed client doesn't leave this timer-goroutine hanging around
+		timer := time.NewTimer(headerFlushDelay)
+		defer timer.Stop()
+		select {
+		case <-timer.C:
+			newConn.WriteHeader(nil)
+		case <-c.ctx.Done():
+		}
 	}(newConn)
 	return newConn, nil
 }
