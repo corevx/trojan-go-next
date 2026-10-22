@@ -185,28 +185,16 @@ func (p *Proxy) relayPacketLoop() {
 // UDP-over-stream relay session instead of a genuine relay failure: trojan UDP
 // sessions have no explicit teardown message, so the peer closing the
 // underlying connection (io.EOF, connection reset) or a local shutdown
-// (net.ErrClosed) is the expected way they end.
-//
-// common.Error flattens wrapped errors into a string and does not implement
-// Unwrap, so errors.Is alone cannot see through it; fall back to suffix
-// matching for the flattened forms.
+// (net.ErrClosed) is the expected way they end. errors.Is sees through
+// common.Error chains via Unwrap; io.ErrUnexpectedEOF (truncated frame, a
+// genuine failure) is distinct from io.EOF and stays reported as ERROR.
 func isPacketSessionClose(err error) bool {
 	if err == nil {
 		return false
 	}
-	if errors.Is(err, io.EOF) ||
+	return errors.Is(err, io.EOF) ||
 		errors.Is(err, net.ErrClosed) ||
-		errors.Is(err, syscall.ECONNRESET) {
-		return true
-	}
-	msg := err.Error()
-	// " | EOF" must not match "unexpected EOF", which means a truncated frame
-	for _, suffix := range []string{" | EOF", "use of closed network connection", "connection reset by peer"} {
-		if strings.HasSuffix(msg, suffix) {
-			return true
-		}
-	}
-	return false
+		errors.Is(err, syscall.ECONNRESET)
 }
 
 func NewProxy(ctx context.Context, cancel context.CancelFunc, sources []tunnel.Server, sink tunnel.Client) *Proxy {
