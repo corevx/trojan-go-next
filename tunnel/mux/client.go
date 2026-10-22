@@ -77,12 +77,12 @@ func (c *Client) cleanLoop() {
 					info.client.Close()
 					info.underlayConn.Close()
 					delete(c.clientPool, id)
-					log.Info("mux client", id, "is dead")
+					log.Debug("mux client", id, "is dead")
 				} else if info.client.NumStreams()+info.pendingStreams == 0 && time.Since(info.lastActiveTime) > c.timeout {
 					info.client.Close()
 					info.underlayConn.Close()
 					delete(c.clientPool, id)
-					log.Info("mux client", id, "is closed due to inactivity")
+					log.Debug("mux client", id, "is closed due to inactivity")
 				}
 			}
 			log.Debug("current mux clients: ", len(c.clientPool))
@@ -160,7 +160,7 @@ func (c *Client) reserveStreamSlot() *smuxClientInfo {
 	for id, info := range c.clientPool {
 		if info.client.IsClosed() {
 			delete(c.clientPool, id)
-			log.Info(fmt.Sprintf("Mux client %x is closed", id))
+			log.Debug(fmt.Sprintf("mux client %x is closed, removed from pool", id))
 			continue
 		}
 		if c.concurrency <= 0 || info.client.NumStreams()+info.pendingStreams < c.concurrency {
