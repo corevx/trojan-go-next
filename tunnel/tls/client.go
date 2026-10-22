@@ -22,20 +22,25 @@ import (
 	"github.com/p4gefau1t/trojan-go/tunnel/transport"
 )
 
+// sessionCacheSize 客户端会话缓存容量：256 足够覆盖常见并发连接规模，
+// LRU 淘汰保证内存有上界。
+const sessionCacheSize = 256
+
 // Client is a tls client
 type Client struct {
-	verify        bool
-	sni           string
-	ca            *x509.CertPool
-	cipher        []uint16
-	alpn          []string
-	sessionTicket bool
-	reuseSession  bool
-	fingerprint   string
-	certPin       string
-	helloID       utls.ClientHelloID
-	keyLogger     io.WriteCloser
-	underlay      tunnel.Client
+	fingerprint string
+	certPin     string
+	helloID     utls.ClientHelloID
+	keyLogger   io.WriteCloser
+	underlay    tunnel.Client
+
+	// tlsConfig / utlsConfig 在 NewClient 构建一次、所有 DialConn 共享：
+	// ClientSessionCache 必须挂在跨连接共享的 config 上，会话复用才可能发生
+	// （每次拨号新建 config 等于给每个握手一个空缓存，票据永远用不出去）。
+	// crypto/tls 与 utls 的 Config 按约定构建后不再修改即可并发使用。
+	// 同一时刻只有一条路径非 nil：fingerprint 非空走 utlsConfig，否则 tlsConfig。
+	tlsConfig  *tls.Config
+	utlsConfig *utls.Config
 }
 
 func (c *Client) Close() error {
@@ -57,15 +62,7 @@ func (c *Client) DialConn(_ *tunnel.Address, overlay tunnel.Tunnel) (tunnel.Conn
 
 	if c.fingerprint != "" {
 		// utls fingerprint
-		tlsConn := utls.UClient(conn, &utls.Config{
-			RootCAs:            c.ca,
-			ServerName:         c.sni,
-			InsecureSkipVerify: !c.verify,
-			KeyLogWriter:       c.keyLogger,
-			// a real browser hello always carries ALPN; omitting it while
-			// impersonating one is a fingerprint contradiction of its own
-			NextProtos: c.alpn,
-		}, c.helloID)
+		tlsConn := utls.UClient(conn, c.utlsConfig, c.helloID)
 		if err := tlsConn.Handshake(); err != nil {
 			return nil, common.NewError("tls failed to handshake with remote server").Base(err)
 		}
@@ -80,15 +77,7 @@ func (c *Client) DialConn(_ *tunnel.Address, overlay tunnel.Tunnel) (tunnel.Conn
 		}, nil
 	}
 	// golang default tls library
-	tlsConn := tls.Client(conn, &tls.Config{
-		InsecureSkipVerify:     !c.verify,
-		ServerName:             c.sni,
-		RootCAs:                c.ca,
-		KeyLogWriter:           c.keyLogger,
-		CipherSuites:           c.cipher,
-		NextProtos:             c.alpn,
-		SessionTicketsDisabled: !c.sessionTicket,
-	})
+	tlsConn := tls.Client(conn, c.tlsConfig)
 	err = tlsConn.Handshake()
 	if err != nil {
 		return nil, common.NewError("tls failed to handshake with remote server").Base(err)
@@ -136,24 +125,20 @@ func NewClient(ctx context.Context, underlay tunnel.Client) (*Client, error) {
 	}
 
 	client := &Client{
-		underlay:      underlay,
-		verify:        cfg.TLS.Verify,
-		sni:           cfg.TLS.SNI,
-		cipher:        fingerprint.ParseCipher(strings.Split(cfg.TLS.Cipher, ":")),
-		alpn:          alpn,
-		sessionTicket: cfg.TLS.ReuseSession,
-		fingerprint:   cfg.TLS.Fingerprint,
-		certPin:       normalizeCertPin(cfg.TLS.CertPinSHA256),
-		helloID:       helloID,
+		underlay:    underlay,
+		fingerprint: cfg.TLS.Fingerprint,
+		certPin:     normalizeCertPin(cfg.TLS.CertPinSHA256),
+		helloID:     helloID,
 	}
 
+	var ca *x509.CertPool
 	if cfg.TLS.CertPath != "" {
 		caCertByte, err := os.ReadFile(cfg.TLS.CertPath)
 		if err != nil {
 			return nil, common.NewError("failed to load cert file").Base(err)
 		}
-		client.ca = x509.NewCertPool()
-		ok := client.ca.AppendCertsFromPEM(caCertByte)
+		ca = x509.NewCertPool()
+		ok := ca.AppendCertsFromPEM(caCertByte)
 		if !ok {
 			log.Warn("invalid cert list")
 		}
@@ -180,6 +165,40 @@ func NewClient(ctx context.Context, underlay tunnel.Client) (*Client, error) {
 
 	if cfg.TLS.CertPath == "" {
 		log.Info("cert is unspecified, using default ca list")
+	}
+
+	// 共享 config 就在此处定稿：reuse_session=true 时挂会话缓存，客户端跨
+	// 连接复用 TLS 会话（缩写握手/PSK）；false 则保持每次完整握手（缓存为
+	// nil 即标准库默认的不复用行为）。SessionTicketsDisabled 是纯服务端
+	// 开关，对客户端握手无效果，客户端复用语义完全由 ClientSessionCache
+	// 决定，不再设置以免误导。
+	if cfg.TLS.Fingerprint != "" {
+		utlsCfg := &utls.Config{
+			RootCAs:            ca,
+			ServerName:         cfg.TLS.SNI,
+			InsecureSkipVerify: !cfg.TLS.Verify,
+			KeyLogWriter:       client.keyLogger,
+			// a real browser hello always carries ALPN; omitting it while
+			// impersonating one is a fingerprint contradiction of its own
+			NextProtos: alpn,
+		}
+		if cfg.TLS.ReuseSession {
+			utlsCfg.ClientSessionCache = utls.NewLRUClientSessionCache(sessionCacheSize)
+		}
+		client.utlsConfig = utlsCfg
+	} else {
+		stdCfg := &tls.Config{
+			InsecureSkipVerify: !cfg.TLS.Verify,
+			ServerName:         cfg.TLS.SNI,
+			RootCAs:            ca,
+			KeyLogWriter:       client.keyLogger,
+			CipherSuites:       fingerprint.ParseCipher(strings.Split(cfg.TLS.Cipher, ":")),
+			NextProtos:         alpn,
+		}
+		if cfg.TLS.ReuseSession {
+			stdCfg.ClientSessionCache = tls.NewLRUClientSessionCache(sessionCacheSize)
+		}
+		client.tlsConfig = stdCfg
 	}
 
 	log.Debug("tls client created")
