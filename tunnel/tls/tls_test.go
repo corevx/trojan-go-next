@@ -7,6 +7,7 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/sha256"
+	stdtls "crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/hex"
@@ -565,5 +566,81 @@ func TestCertPinSHA256(t *testing.T) {
 				t.Fatal("dial with wrong pin must fail")
 			}
 		})
+	}
+}
+
+// TestSessionResumptionAcrossConnections guards the shared tls.Config fix:
+// per-connection configs gave each handshake a fresh session ticket key
+// space, so a ticket obtained on connection #1 could never be resumed on
+// connection #2 and DidResume stayed false forever.
+func TestSessionResumptionAcrossConnections(t *testing.T) {
+	certPath := filepath.Join(t.TempDir(), "server-rsa2048.crt")
+	keyPath := filepath.Join(t.TempDir(), "server-rsa2048.key")
+	genRSATestCert(t, certPath, keyPath)
+	serverCfg := &Config{
+		TLS: TLSConfig{
+			VerifyHostName: false,
+			ReuseSession:   true,
+			KeyPath:        keyPath,
+			CertPath:       certPath,
+		},
+	}
+	sctx := config.WithConfig(context.Background(), Name, serverCfg)
+
+	port := common.PickPort("tcp", "127.0.0.1")
+	transportConfig := &transport.Config{
+		LocalHost:  "127.0.0.1",
+		LocalPort:  port,
+		RemoteHost: "127.0.0.1",
+		RemotePort: port,
+	}
+	ctx := config.WithConfig(context.Background(), transport.Name, transportConfig)
+	tcpServer, err := transport.NewServer(ctx, nil)
+	common.Must(err)
+	s, err := NewServer(sctx, tcpServer)
+	common.Must(err)
+	defer s.Close()
+
+	// drain accepted connections so acceptLoop never blocks on a full chan
+	go func() {
+		for {
+			conn, err := s.AcceptConn(nil)
+			if err != nil {
+				return
+			}
+			conn.Close()
+		}
+	}()
+
+	clientCfg := &stdtls.Config{
+		InsecureSkipVerify: true,
+		ServerName:         "localhost",
+		ClientSessionCache: stdtls.NewLRUClientSessionCache(4),
+		MinVersion:         stdtls.VersionTLS12,
+	}
+
+	dialAndHandshake := func() bool {
+		raw, err := net.DialTimeout("tcp", fmt.Sprintf("127.0.0.1:%d", port), 5*time.Second)
+		common.Must(err)
+		conn := stdtls.Client(raw, clientCfg)
+		defer conn.Close()
+		common.Must(conn.Handshake())
+		// TLS 1.3 session tickets arrive post-handshake; the client only
+		// processes (and caches) them while reading, so give the first
+		// connection a read window before closing
+		buf := [1]byte{}
+		conn.SetReadDeadline(time.Now().Add(300 * time.Millisecond))
+		_, _ = conn.Read(buf[:])
+		return conn.ConnectionState().DidResume
+	}
+
+	if dialAndHandshake() {
+		t.Fatal("first connection should be a full handshake, not a resumption")
+	}
+	// give the server a moment to deliver its NewSessionTicket post-handshake
+	// message before the ticket is needed again
+	time.Sleep(200 * time.Millisecond)
+	if !dialAndHandshake() {
+		t.Fatal("second connection failed to resume the session — shared tls.Config regression")
 	}
 }

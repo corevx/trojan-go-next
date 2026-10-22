@@ -9,7 +9,6 @@ import (
 	"os"
 	"os/exec"
 	"strconv"
-	"strings"
 	"sync"
 	"time"
 
@@ -50,17 +49,13 @@ const (
 // isListenerClosed reports whether an Accept error means the listener itself is
 // gone (i.e. Server.Close or listener failure), so acceptLoop must exit instead
 // of retrying. Everything else (EMFILE/ENFILE/ECONNABORTED/EPROTO/...) is
-// treated as transient and retried. common.Error flattens wrapped errors into a
-// string and does not implement Unwrap, hence the suffix fallback (same as
-// proxy.isPacketSessionClose).
+// treated as transient and retried. errors.Is sees through common.Error
+// chains via Unwrap, so wrapped accept errors are matched exactly.
 func isListenerClosed(err error) bool {
 	if err == nil {
 		return false
 	}
-	if errors.Is(err, net.ErrClosed) {
-		return true
-	}
-	return strings.HasSuffix(err.Error(), "use of closed network connection")
+	return errors.Is(err, net.ErrClosed)
 }
 
 func (s *Server) acceptLoop() {

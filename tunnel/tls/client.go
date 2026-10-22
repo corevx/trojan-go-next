@@ -28,6 +28,7 @@ type Client struct {
 	sni           string
 	ca            *x509.CertPool
 	cipher        []uint16
+	alpn          []string
 	sessionTicket bool
 	reuseSession  bool
 	fingerprint   string
@@ -61,6 +62,9 @@ func (c *Client) DialConn(_ *tunnel.Address, overlay tunnel.Tunnel) (tunnel.Conn
 			ServerName:         c.sni,
 			InsecureSkipVerify: !c.verify,
 			KeyLogWriter:       c.keyLogger,
+			// a real browser hello always carries ALPN; omitting it while
+			// impersonating one is a fingerprint contradiction of its own
+			NextProtos: c.alpn,
 		}, c.helloID)
 		if err := tlsConn.Handshake(); err != nil {
 			return nil, common.NewError("tls failed to handshake with remote server").Base(err)
@@ -82,6 +86,7 @@ func (c *Client) DialConn(_ *tunnel.Address, overlay tunnel.Tunnel) (tunnel.Conn
 		RootCAs:                c.ca,
 		KeyLogWriter:           c.keyLogger,
 		CipherSuites:           c.cipher,
+		NextProtos:             c.alpn,
 		SessionTicketsDisabled: !c.sessionTicket,
 	})
 	err = tlsConn.Handshake()
@@ -123,11 +128,19 @@ func NewClient(ctx context.Context, underlay tunnel.Client) (*Client, error) {
 		log.Warn("tls sni is unspecified")
 	}
 
+	alpn := cfg.TLS.ALPN
+	if len(alpn) == 0 {
+		// websocket needs HTTP/1.1; offering h2 risks negotiating it and
+		// breaking the ws handshake
+		alpn = []string{"http/1.1"}
+	}
+
 	client := &Client{
 		underlay:      underlay,
 		verify:        cfg.TLS.Verify,
 		sni:           cfg.TLS.SNI,
 		cipher:        fingerprint.ParseCipher(strings.Split(cfg.TLS.Cipher, ":")),
+		alpn:          alpn,
 		sessionTicket: cfg.TLS.ReuseSession,
 		fingerprint:   cfg.TLS.Fingerprint,
 		certPin:       normalizeCertPin(cfg.TLS.CertPinSHA256),
