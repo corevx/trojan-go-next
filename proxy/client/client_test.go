@@ -44,6 +44,21 @@ func TestGenerateClientTree(t *testing.T) {
 			want: []string{"TRANSPORT", "TROJAN"},
 		},
 		{
+			name: "reality replaces tls",
+			opts: StackOptions{Reality: true},
+			want: []string{"TRANSPORT", "REALITY", "TROJAN"},
+		},
+		{
+			name: "reality with mux",
+			opts: StackOptions{Reality: true, Mux: true},
+			want: []string{"TRANSPORT", "REALITY", "TROJAN", "MUX", "SIMPLESOCKS"},
+		},
+		{
+			name: "reality with shadowsocks and router",
+			opts: StackOptions{Reality: true, Shadowsocks: true, Router: true},
+			want: []string{"TRANSPORT", "REALITY", "SHADOWSOCKS", "TROJAN", "ROUTER"},
+		},
+		{
 			name: "full stack",
 			opts: StackOptions{Websocket: true, Shadowsocks: true, Mux: true, Router: true},
 			want: []string{"TRANSPORT", "TLS", "WEBSOCKET", "SHADOWSOCKS", "TROJAN", "MUX", "SIMPLESOCKS", "ROUTER"},

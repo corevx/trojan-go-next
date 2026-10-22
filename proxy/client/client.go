@@ -3,11 +3,13 @@ package client
 import (
 	"context"
 
+	"github.com/p4gefau1t/trojan-go/common"
 	"github.com/p4gefau1t/trojan-go/config"
 	"github.com/p4gefau1t/trojan-go/proxy"
 	"github.com/p4gefau1t/trojan-go/tunnel/adapter"
 	"github.com/p4gefau1t/trojan-go/tunnel/http"
 	"github.com/p4gefau1t/trojan-go/tunnel/mux"
+	"github.com/p4gefau1t/trojan-go/tunnel/reality"
 	"github.com/p4gefau1t/trojan-go/tunnel/router"
 	"github.com/p4gefau1t/trojan-go/tunnel/shadowsocks"
 	"github.com/p4gefau1t/trojan-go/tunnel/simplesocks"
@@ -28,13 +30,21 @@ type StackOptions struct {
 	Websocket       bool
 	Shadowsocks     bool
 	Router          bool
+	Reality         bool
 }
 
 // GenerateClientTree generate general outbound protocol stack
 func GenerateClientTree(opts StackOptions) []string {
 	clientStack := []string{transport.Name}
 	if !opts.TransportPlugin {
-		clientStack = append(clientStack, tls.Name)
+		// REALITY 与 TLS 互斥占位：REALITY 以指纹 ClientHello 内嵌认证，
+		// 取代常规 TLS 层，且不能与 websocket 叠加（组合校验在 proxy
+		// creator 中完成）。
+		if opts.Reality {
+			clientStack = append(clientStack, reality.Name)
+		} else {
+			clientStack = append(clientStack, tls.Name)
+		}
 	}
 	if opts.Websocket {
 		clientStack = append(clientStack, websocket.Name)
@@ -72,12 +82,22 @@ func init() {
 		root.BuildNext(http.Name).IsEndpoint = true
 		root.BuildNext(socks.Name).IsEndpoint = true
 
+		if cfg.Reality.Enabled && cfg.Websocket.Enabled {
+			cancel()
+			return nil, common.NewError("reality and websocket cannot be enabled together")
+		}
+		if cfg.Reality.Enabled && cfg.TransportPlugin.Enabled {
+			cancel()
+			return nil, common.NewError("reality and transport_plugin cannot be enabled together")
+		}
+
 		clientStack := GenerateClientTree(StackOptions{
 			TransportPlugin: cfg.TransportPlugin.Enabled,
 			Mux:             cfg.Mux.Enabled,
 			Websocket:       cfg.Websocket.Enabled,
 			Shadowsocks:     cfg.Shadowsocks.Enabled,
 			Router:          cfg.Router.Enabled,
+			Reality:         cfg.Reality.Enabled,
 		})
 		c, err := proxy.CreateClientStack(ctx, clientStack)
 		if err != nil {
