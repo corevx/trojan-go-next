@@ -100,7 +100,11 @@ func (s *Server) acceptLoop() {
 			select {
 			case <-s.ctx.Done():
 			default:
-				log.Fatal(common.NewError("transport accept error" + err.Error()))
+				// the underlay's context is independent of ours: its normal
+				// shutdown must not kill the whole process (log.Fatal here
+				// raced on windows and crashed the test binary) — log and
+				// stop accepting instead
+				log.Error(common.NewError("transport accept error").Base(err))
 			}
 			return
 		}
