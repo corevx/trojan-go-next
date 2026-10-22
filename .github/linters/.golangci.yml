@@ -22,6 +22,18 @@ linters:
     - staticcheck
     - unparam
     - unused
+  settings:
+    depguard:
+      # 不写规则时 depguard 会套用自身默认清单（golangci-lint v2 实测会
+      # 误伤全仓正常 import，仅靠 only-new-issues 掩盖——这里显式编码
+      # 本项目的真实分层不变量。
+      rules:
+        no-proxy-in-tunnel:
+          files:
+            - "**/tunnel/**"
+          deny:
+            - pkg: "github.com/p4gefau1t/trojan-go/proxy"
+              desc: tunnel 层不得反向依赖 proxy 组装层
   exclusions:
     generated: strict
     rules:

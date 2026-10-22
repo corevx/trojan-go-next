@@ -244,7 +244,7 @@ func serverPortOf(addr string) string {
 	return port
 }
 
-func stlsFetch(t *testing.T, socksPort int, url string) (*http.Response, string, error) {
+func stlsFetch(t *testing.T, socksPort int, url string) (int, string, error) {
 	t.Helper()
 	dialer, err := netproxy.SOCKS5("tcp", fmt.Sprintf("127.0.0.1:%d", socksPort), nil, netproxy.Direct)
 	if err != nil {
@@ -256,21 +256,21 @@ func stlsFetch(t *testing.T, socksPort int, url string) (*http.Response, string,
 	client := &http.Client{Transport: transport, Timeout: 15 * time.Second}
 	resp, err := client.Get(url)
 	if err != nil {
-		return nil, "", err
+		return 0, "", err
 	}
 	body, _ := io.ReadAll(resp.Body)
 	resp.Body.Close()
-	return resp, string(body), nil
+	return resp.StatusCode, string(body), nil
 }
 
 func stlsFetchOK(t *testing.T, socksPort int, url, wantPrefix string) {
 	t.Helper()
-	resp, body, err := stlsFetch(t, socksPort, url)
+	status, body, err := stlsFetch(t, socksPort, url)
 	if err != nil {
 		t.Fatalf("proxied fetch failed: %v", err)
 	}
-	if resp.StatusCode != http.StatusOK {
-		t.Fatalf("expected 200, got %d", resp.StatusCode)
+	if status != http.StatusOK {
+		t.Fatalf("expected 200, got %d", status)
 	}
 	if !strings.HasPrefix(body, wantPrefix) {
 		t.Fatalf("body %q does not come from %q", body, wantPrefix)
@@ -353,13 +353,13 @@ func TestInteropShadowTLSSingBoxV3(t *testing.T) {
 	for i := 0; i < concurrency; i++ {
 		go func(i int) {
 			defer wg.Done()
-			resp, body, err := stlsFetch(t, socksPort, fmt.Sprintf("%s/concurrent-%d", target, i))
+			status, body, err := stlsFetch(t, socksPort, fmt.Sprintf("%s/concurrent-%d", target, i))
 			if err != nil {
 				errs <- err
 				return
 			}
-			if resp.StatusCode != 200 || body != fmt.Sprintf("echo-path-/concurrent-%d", i) {
-				errs <- fmt.Errorf("concurrent %d: status %d body %q", i, resp.StatusCode, body)
+			if status != 200 || body != fmt.Sprintf("echo-path-/concurrent-%d", i) {
+				errs <- fmt.Errorf("concurrent %d: status %d body %q", i, status, body)
 			}
 		}(i)
 	}

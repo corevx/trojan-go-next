@@ -256,7 +256,7 @@ func NewClient(ctx context.Context, underlay tunnel.Client) (*Client, error) {
 		log.Warn("reality server-name is unspecified, falling back to remote_addr")
 	}
 
-	helloID := utls.ClientHelloID{}
+	var helloID utls.ClientHelloID
 	switch rcfg.Fingerprint {
 	case "firefox":
 		helloID = utls.HelloFirefox_Auto
