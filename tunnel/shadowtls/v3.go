@@ -213,6 +213,10 @@ func (c *verifiedConn) Read(p []byte) (int, error) {
 				return 0, common.NewError("application data verification failed")
 			}
 			c.pending = frame[tlsHMACHeaderSize:]
+			if len(c.pending) == 0 {
+				// 空 payload 帧：继续读下一帧，避免向调用方返回 (0, nil)
+				continue
+			}
 			return c.readPending(p), nil
 		default:
 			sendAlert(c.Conn)
