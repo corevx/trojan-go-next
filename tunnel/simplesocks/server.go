@@ -36,28 +36,48 @@ func (s *Server) acceptLoop() {
 			}
 			continue
 		}
-		metadata := new(tunnel.Metadata)
-		if err := metadata.ReadFrom(conn); err != nil {
-			log.Error(common.NewError("simplesocks server faield to read header").Base(err))
-			conn.Close()
-			continue
-		}
-		switch metadata.Command {
-		case Connect:
-			s.connChan <- &Conn{
-				metadata: metadata,
-				Conn:     conn,
-			}
-		case Associate:
-			s.packetChan <- &PacketConn{
-				PacketConn: trojan.PacketConn{
-					Conn: conn,
-				},
-			}
-		default:
-			log.Error(common.NewError(fmt.Sprintf("simplesocks unknown command %d", metadata.Command)))
+		// the header read must not stall the accept loop: a stream which never
+		// sends its simplesocks header would otherwise block all subsequent ones
+		go s.handleStream(conn)
+	}
+}
+
+func (s *Server) handleStream(conn tunnel.Conn) {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Error(common.NewError("panic in simplesocks handleStream goroutine").Base(fmt.Errorf("%v", r)))
 			conn.Close()
 		}
+	}()
+	metadata := new(tunnel.Metadata)
+	if err := metadata.ReadFrom(conn); err != nil {
+		log.Error(common.NewError("simplesocks server faield to read header").Base(err))
+		conn.Close()
+		return
+	}
+	switch metadata.Command {
+	case Connect:
+		select {
+		case s.connChan <- &Conn{
+			metadata: metadata,
+			Conn:     conn,
+		}:
+		case <-s.ctx.Done():
+			conn.Close()
+		}
+	case Associate:
+		select {
+		case s.packetChan <- &PacketConn{
+			PacketConn: trojan.PacketConn{
+				Conn: conn,
+			},
+		}:
+		case <-s.ctx.Done():
+			conn.Close()
+		}
+	default:
+		log.Error(common.NewError(fmt.Sprintf("simplesocks unknown command %d", metadata.Command)))
+		conn.Close()
 	}
 }
 
