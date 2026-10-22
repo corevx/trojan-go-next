@@ -20,7 +20,7 @@ import (
 
 const (
 	// bindTimeout bounds the BindReq/BindResp handshake on the control stream
-	bindTimeout = time.Second * 30 // 高负载下 10s 读不到 BindResp(实测 ~1/10 复现):成功路径即时返回,只放宽失败判定窗
+	bindTimeout = time.Second * 60 // CI 弱核(2C)并行全量测试时 30s 仍偶发超时(TestReverseNoGoroutineLeak 实测 31.02s 卡线):成功路径即时返回,只放宽失败判定窗
 	// controlWriteWait bounds a single control frame write
 	controlWriteWait    = time.Second * 5
 	defaultRetryInitial = time.Second * 3
