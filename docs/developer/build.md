@@ -122,7 +122,11 @@ SHADOWSOCKS_SF_CAPACITY="-1" go test -v ./tunnel/trojan/ -run TestTrojan
 
 ## Docker 构建
 
-项目提供了多阶段构建的 Dockerfile：
+项目提供两种镜像构建方式。
+
+### 方式一：完整多阶段构建（`Dockerfile`）
+
+在容器内完成编译，适合 CI 等有私有模块凭证（或无私有依赖）的环境：
 
 ```bash
 # 基本构建
@@ -130,21 +134,42 @@ docker build -t trojan-go-next .
 
 # 指定版本信息
 docker build \
-  --build-arg VERSION=0.10.6 \
+  --build-arg VERSION=1.1.2 \
   --build-arg COMMIT=$(git rev-parse HEAD) \
-  -t trojan-go-next:0.10.6 .
+  -t trojan-go-next:1.1.2 .
 ```
 
 Dockerfile 结构：
 
-1. **构建阶段**（`golang:1.25-alpine`）：编译二进制 + 下载 geoip/geosite 数据
-2. **运行阶段**（`alpine:3.20`）：仅包含二进制和 `.dat` 文件，最终镜像约 49MB
+1. **构建阶段**（`golang:1.26-alpine`）：编译二进制 + 下载 geoip/geosite 数据
+2. **运行阶段**（`alpine:3.20`）：仅包含二进制和 `.dat` 文件，最终镜像约 54MB
 
-运行容器：
+> 注意：项目依赖私有模块（`git.toimc.com/toimc/smux`）时，容器内 `go mod download` 无法拉取，请使用方式二。
+
+### 方式二：本地交叉编译 + 运行时镜像（`Dockerfile.runtime`）
+
+本地编译好二进制再打包，绕开容器内私有依赖下载（生产推荐）：
+
+```bash
+# 1. 本地交叉编译（以 linux/amd64 为例）
+CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -tags "full" -trimpath \
+  -ldflags "-s -w -X github.com/p4gefau1t/trojan-go/constant.Version=1.1.2 \
+  -X github.com/p4gefau1t/trojan-go/constant.Commit=$(git rev-parse --short HEAD)" \
+  -o build/trojan-go-next .
+
+# 2. 准备 geo 数据到 build/ 目录（见 Makefile 的 geoip.dat/geosite.dat 目标）
+
+# 3. 打包镜像
+docker build --platform linux/amd64 -f Dockerfile.runtime -t trojan-go-next:1.1.2 build/
+```
+
+> **跨架构构建必须带 `--platform linux/amd64`**：在 Apple Silicon 上不带此参数，BuildKit 会按宿主架构解析基础镜像，产出 arm64 manifest 却混入 amd64 二进制，运行时报 `exec format error`；`--no-cache` 无法解决此问题（已实测踩坑）。
+
+### 运行容器
 
 ```bash
 docker run -d --name trojan-go-next \
-  -v /path/to/config.json:/etc/trojan-go-next/config.json \
+  -v /path/to/config.json:/etc/trojan-go/config.json \
   -p 443:443 \
   trojan-go-next
 ```

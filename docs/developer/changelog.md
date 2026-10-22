@@ -2,6 +2,62 @@
 title: "更新日志"
 ---
 
+## v1.1.2
+
+发布日期：2026-10-22。P2 可靠性收尾修复：错误链穿透、TLS 会话恢复、客户端 ALPN。
+
+- **错误链**：`common.Error` 此前仅拼接错误字符串（被包装的 error 对象被丢弃），现保存 cause 并实现 `Unwrap()`——`errors.Is/As` 可穿透整个包装链，`Error()` 输出格式不变。`proxy` 与 `transport` 中两处字符串后缀匹配的临时方案退化为精确的 `errors.Is` 判断
+- **TLS 服务端**：tls.Config 改为全连接共享（原实现每连接新建）。session ticket key 存于 Config 实例内部，逐连接配置使每个 ticket 只在单个连接内有效，**会话恢复（session resumption）从未生效**；修复后 `reuse_session` 配置真正兑现，减少全量握手的 1-RTT 与非对称运算开销。附跨连接恢复的回归测试（变异验证：逐连接配置下必红）
+- **TLS 客户端**：utls 与标准库两条路径均传递 ALPN（`NextProtos`），缺省 `http/1.1`（WebSocket 依赖 HTTP/1.1，避免协商出 h2 破坏握手）。utls 指纹路径此前完全忽略 ALPN——真实浏览器 ClientHello 必带该扩展，伪装指纹缺失 ALPN 本身即指纹矛盾点。cipher/session 在指纹路径仍被有意忽略（指纹固定语义，非缺陷）
+
+## v1.1.1
+
+发布日期：2026-10-22。入站链可靠性修复：消除「新连接全挂、既有连接正常、进程存活、只能重启」类故障的全部已知代码级成因。每项修复均附经变异验证的回归测试（对旧代码必红）。
+
+### P0 — 可致服务整体不可用
+
+| 修复项 | 缺陷 | 后果 |
+|--------|------|------|
+| transport accept 容错 | 对任意 Accept 错误（含瞬时 EMFILE/ENFILE）log 后直接 return，**永久停止 accept** | fd 压力波动一次即触发「端口在听但新连接无人接收」，不可自愈。现仅 `net.ErrClosed`/ctx 退出，其余指数退避（5ms→1s）持续重试 |
+| TLS 入站链 deadline | 每连接 goroutine 全程零 SetDeadline | 建连后不发（或半发）ClientHello 的静默连接**永久**占用 goroutine。现握手与请求解析各设 30s 超时，协议识别后清除 |
+| 裸 channel 发送 | `connChan`/`wsChan`（容量 32）无 ctx 保护发送 | 下游停滞时每个新连接的 goroutine 持 fd 阻塞堆积直至 EMFILE。现 `select`+`ctx.Done()`，退出路径关连接 |
+| WebSocket 畸形请求卡滞 | 带 Upgrade 头但缺 `Sec-WebSocket-Key` 的请求使 x/net/websocket 静默返回，AcceptConn 必等满随机 5-15s 超时 | 上层串行调用，低速率恶意流即可长期占死 ws 接受路径并级联 fd 堆积。现 ServeHTTP 任意退出立即解除等待 |
+| simplesocks 串行读头 | acceptLoop 串行对每条 smux 流读协议头，无超时 | 一条开流不发头的连接卡死全部新 mux 流。现 per-stream goroutine 化（不用 SetDeadline——deadline 会透传杀死整个 smux 会话） |
+
+### P1 — 资源与噪音
+
+| 修复项 | 缺陷 |
+|--------|------|
+| checkKeyPairLoop busy-loop | 证书文件暂时不可读（acme.sh 替换窗口/挂载抖动）时三个 error 分支的 `continue` 跳过 ticker 等待，无间隔自旋烧满一个核+日志刷屏。实测旧代码 225ms 内重试 125,894 次，修复后受 checkRate 节流 |
+| UDP 会话关闭误报 | trojan UDP 会话无显式拆链消息，客户端关连接产生的 io.EOF 被当 ERROR 高频刷屏。EOF/ErrClosed/ECONNRESET 降为 debug，`unexpected EOF`（截断帧，真异常）仍报 ERROR |
+| ws 超时路径泄漏 | 握手超时后连接不关闭、Handler goroutine 阻塞在无缓冲 channel。现 chan 缓冲 1 + 超时关连接 |
+
+### 构建
+
+- Dockerfile builder 升级 golang:1.26-alpine（go.mod 已要求 1.26.0）
+- 新增 `Dockerfile.runtime`：本地交叉编译二进制+geo 数据直接打包的轻量运行时镜像（完整多阶段构建需在容器内拉取私有依赖，无凭证不可行）
+- scenario 集成测试的内联证书改为运行时自签（原证书 2026-09-13 过期导致全量测试必红）
+
+## v1.1.0
+
+发布日期：2026-10-11。反向端口转发与反 DPI 指纹能力。
+
+### 新特性
+
+- **reverse 反向端口转发**：新增 `tunnel/reverse` 包与控制协议（trojan 命令字 Reverse/4），支持服务端反向穿透客户端侧端口；`ReverseListener` 暴露 `Connected()` 会话健康面，供上层换路看门狗区分「隧道活着但上级僵死」与正常瞬断；流级闲置掐断（`stream_idle_timeout`）与 session 健康检测解耦；附进程内全链路测试（回显/ACL/冲突/重连/泄漏）
+- **smux 帧级随机化（反 DPI）**：帧切分点从 `[frame_min, frame_max]` 均匀随机（默认关闭），打破固定分片→固定 TLS record 周期的可统计指纹；keepalive NOP 间隔 ±jitter 随机（默认关闭）打散固定周期信标。线上协议零改动，旧对端照常解析
+- **TLS 客户端证书指纹钉死**（`cert_pin_sha256`）：握手后校验叶子证书 SHA-256，支持冒号分组与裸 hex。级联叶子连自签跳板时比裸关校验安全
+
+### 修复
+
+- reverse bind 握手超时 10s→30s（高负载下测试 1/10 复现误判）
+- reverse 配置遵循 trojan-go 顶层节约定
+- 测试硬编码证书全量换运行时自签（2026-09-13 过期）
+
+### 依赖
+
+合并 Dependabot 累积 PR：grpc 1.83.2、x/net 0.59.0、protobuf 1.36.12、mysql 1.10.1、testify 1.12.1 等
+
 ## v1.0.2
 
 发布日期：2026-06-30。CI/CD 基础设施维护与依赖升级，无功能性变更，对终端用户无感知。
