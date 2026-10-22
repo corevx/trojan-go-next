@@ -36,8 +36,13 @@ type User struct {
 	limiterLock sync.RWMutex
 	sendLimiter *rate.Limiter
 	recvLimiter *rate.Limiter
-	ctx         context.Context
-	cancel      context.CancelFunc
+	// limiterConfigured is set once a limiter has ever been assigned and
+	// never cleared afterwards: users without any speed limit skip the
+	// limiter lock entirely in AddTraffic, and a user whose limit was removed
+	// keeps taking the (cheap, uncontended) locked path harmlessly.
+	limiterConfigured atomic.Bool
+	ctx               context.Context
+	cancel            context.CancelFunc
 }
 
 func (u *User) Close() error {
@@ -88,14 +93,21 @@ func (u *User) GetIPLimit() int {
 }
 
 func (u *User) AddTraffic(sent, recv int) {
-	u.limiterLock.RLock()
-	defer u.limiterLock.RUnlock()
-
-	if u.sendLimiter != nil && sent >= 0 {
-		u.sendLimiter.WaitN(u.ctx, sent)
-	}
-	if u.recvLimiter != nil && recv >= 0 {
-		u.recvLimiter.WaitN(u.ctx, recv)
+	// Fast path: most users never have a speed limit configured, so skip the
+	// limiter lock entirely. The flag is only ever set while holding the
+	// write lock together with the limiter pointers, so once it is observed
+	// the RLock below is guaranteed to see the pointers.
+	if u.limiterConfigured.Load() {
+		u.limiterLock.RLock()
+		sendLimiter := u.sendLimiter
+		recvLimiter := u.recvLimiter
+		u.limiterLock.RUnlock()
+		if sendLimiter != nil && sent >= 0 {
+			sendLimiter.WaitN(u.ctx, sent)
+		}
+		if recvLimiter != nil && recv >= 0 {
+			recvLimiter.WaitN(u.ctx, recv)
+		}
 	}
 	atomic.AddUint64(&u.sent, uint64(sent))
 	atomic.AddUint64(&u.recv, uint64(recv))
@@ -109,11 +121,13 @@ func (u *User) SetSpeedLimit(send, recv int) {
 		u.sendLimiter = nil
 	} else {
 		u.sendLimiter = rate.NewLimiter(rate.Limit(send), send*2)
+		u.limiterConfigured.Store(true)
 	}
 	if recv <= 0 {
 		u.recvLimiter = nil
 	} else {
 		u.recvLimiter = rate.NewLimiter(rate.Limit(recv), recv*2)
+		u.limiterConfigured.Store(true)
 	}
 }
 
