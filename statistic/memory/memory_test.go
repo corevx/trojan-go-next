@@ -4,6 +4,7 @@ import (
 	"context"
 	"runtime"
 	"strconv"
+	"sync"
 	"testing"
 	"time"
 
@@ -119,6 +120,100 @@ func TestMemoryAuth(t *testing.T) {
 	}
 	user.Close()
 	auth.Close()
+}
+
+// TestAddTrafficNoLimiterConcurrent verifies the lock-free fast path: with no
+// speed limit configured, concurrent AddTraffic calls must accumulate exactly
+// (no lost updates) and never block each other.
+func TestAddTrafficNoLimiterConcurrent(t *testing.T) {
+	cfg := &Config{
+		Passwords: nil,
+	}
+	ctx := config.WithConfig(context.Background(), Name, cfg)
+	auth, err := NewAuthenticator(ctx)
+	common.Must(err)
+	common.Must(auth.AddUser("concurrent"))
+	valid, user := auth.AuthUser("concurrent")
+	if !valid {
+		t.Fatal("add, auth")
+	}
+
+	const goroutines = 8
+	const iters = 500
+	var wg sync.WaitGroup
+	start := make(chan struct{})
+	for i := 0; i < goroutines; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			<-start
+			for j := 0; j < iters; j++ {
+				user.AddTraffic(3, 5)
+			}
+		}()
+	}
+	close(start)
+	wg.Wait()
+
+	sent, recv := user.GetTraffic()
+	if sent != 3*goroutines*iters || recv != 5*goroutines*iters {
+		t.Fatalf("lost updates in lock-free path: sent=%d recv=%d, want %d/%d",
+			sent, recv, 3*goroutines*iters, 5*goroutines*iters)
+	}
+}
+
+// TestAddTrafficSpeedLimit verifies the limiter semantics are unchanged once a
+// speed limit is set: the token burst is consumed instantly, further traffic
+// is throttled by WaitN, and removing the limit restores the unthrottled path.
+func TestAddTrafficSpeedLimit(t *testing.T) {
+	cfg := &Config{
+		Passwords: nil,
+	}
+	ctx := config.WithConfig(context.Background(), Name, cfg)
+	auth, err := NewAuthenticator(ctx)
+	common.Must(err)
+	common.Must(auth.AddUser("limited"))
+	valid, user := auth.AuthUser("limited")
+	if !valid {
+		t.Fatal("add, auth")
+	}
+
+	// unconstrained while no limit is configured: a big chunk goes through at once
+	start := time.Now()
+	user.AddTraffic(1<<20, 1<<20)
+	if elapsed := time.Since(start); elapsed > 500*time.Millisecond {
+		t.Fatalf("unlimited user throttled: %v", elapsed)
+	}
+
+	// limit 50 B/s, burst 100 B
+	user.SetSpeedLimit(50, 50)
+
+	// the initial burst is granted immediately
+	start = time.Now()
+	user.AddTraffic(100, 100)
+	if elapsed := time.Since(start); elapsed > 500*time.Millisecond {
+		t.Fatalf("burst not granted immediately: %v", elapsed)
+	}
+
+	// the burst is exhausted: another 50 B must wait for the 50 B/s refill
+	user.AddTraffic(50, 50)
+	if elapsed := time.Since(start); elapsed < 400*time.Millisecond {
+		t.Fatalf("speed limit not enforced: refilled in %v", elapsed)
+	} else {
+		t.Log("throttled for", elapsed)
+	}
+
+	// removing the limit restores the fast path
+	user.SetSpeedLimit(0, 0)
+	start = time.Now()
+	user.AddTraffic(1<<20, 1<<20)
+	if elapsed := time.Since(start); elapsed > 500*time.Millisecond {
+		t.Fatalf("limit removal not effective: %v", elapsed)
+	}
+
+	if send, recv := user.GetSpeedLimit(); send != 0 || recv != 0 {
+		t.Fatalf("GetSpeedLimit after removal: %d/%d", send, recv)
+	}
 }
 
 func BenchmarkMemoryUsage(b *testing.B) {
