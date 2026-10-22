@@ -40,3 +40,7 @@ node_modules/
 credentials*
 secrets*
 .playwright-mcp/
+
+# vendored deps must never be filtered by the sensitive-file rules above
+# (grpc ships packages literally named "credentials")
+!vendor/**
