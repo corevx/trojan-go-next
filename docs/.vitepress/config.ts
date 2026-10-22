@@ -85,6 +85,8 @@ function createSidebarZH() {
       collapsed: false,
       items: [
         { text: '多路复用', link: '/features/mux' },
+        { text: 'ShadowTLS v3 抗探测（v1.3.0）', link: '/features/shadowtls' },
+        { text: 'REALITY 出站（v1.4.0）', link: '/features/reality' },
         { text: 'WebSocket CDN 中转', link: '/features/websocket' },
         { text: '路由分流与广告屏蔽', link: '/features/router' },
         { text: 'AEAD 二次加密', link: '/features/aead' },

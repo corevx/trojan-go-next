@@ -257,6 +257,43 @@ Websocket传输是trojan-go-next的特性。在**正常的直接连接代理节�
 
 ```host```Websocket握手时，HTTP请求中使用的主机名。客户端如果留空则使用```remote_addr```填充。如果使用了CDN，这个选项一般填入域名。不正确的```host```可能导致CDN无法转发请求。
 
+### ```shadowtls``` ShadowTLS v3 选项（v1.3.0，服务端）
+
+启用后该端口成为 ShadowTLS v3 抗探测端口：未授权连接（含探测）透明中继到真实站点，授权连接内层跑裸 trojan。**不得与 ssl、websocket、transport_plugin 同用**，详见[功能文档](/features/shadowtls)。
+
+```yaml
+shadowtls:
+    enabled: true
+    version: 3
+    # ShadowTLS 层用户（与 password 的 trojan 认证是两层独立凭证）
+    users:
+        - name: user1
+          password: 你的shadowtls密码
+    # 真实站点：中继握手目标，建议支持 TLS 1.3 的大站
+    handshake:
+        server: www.apple.com
+        server_port: 443
+    # 严格模式：真站握手非 TLS 1.3 时拒绝提供代理服务（默认 true）
+    strict: true
+```
+
+### ```reality``` REALITY 出站选项（v1.4.0，客户端）
+
+启用后客户端以 REALITY 方式对接 sing-box / mihomo 的 trojan-REALITY 服务端，替代 ssl 层。**不得与 websocket、transport_plugin 同用**，详见[功能文档](/features/reality)。
+
+```yaml
+reality:
+    enabled: true
+    # 服务端下发的 x25519 公钥
+    public-key: xxxxxxxx
+    # 服务端配置的 short_id（十六进制）
+    short-id: 0123456789abcdef
+    # 伪装真站域名，须与服务端 handshake 一致
+    server-name: www.apple.com
+    # TLS 指纹：chrome（默认）/ firefox / ios
+    fingerprint: chrome
+```
+
 ### ``shadowsocks`` AEAD加密选项
 
 此选项用于替代弃用的混淆加密和双重TLS。如果此选项被设置启用，Trojan协议层下将插入一层Shadowsocks AEAD加密层。也即（已经加密的）TLS隧道内，所有的Trojan协议将再使用AEAD方法进行加密。注意，此选项和Websocket是否开启无关。无论Websocket是否开启，所有Trojan流量都会被再进行一次加密。

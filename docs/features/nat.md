@@ -230,3 +230,9 @@ curl -v https://www.google.com
 # 4. 检查 Trojan-Go-Next 日志中是否有连接记录
 # 日志级别设为 0 (Debug) 或 1 (Info) 可以看到详细连接信息
 ```
+
+## 路由分流（v1.2.0 起）
+
+v1.2.0 解除了 NAT 模式下 `router` 的历史禁用：`router.enabled: true` 现在可以在 `run_type: nat` 中使用，域名/GeoIP 规则照常生效。
+
+注意：网关 PREROUTING 形态下若内网设备 DNS 未被劫持，基于**域名**的规则可能失效（内核只送来 IP 包）；基于 IP/GeoIP 的规则不受影响。回环风险在该形态下不存在（代理出站走 `mark` 之外的路径）。

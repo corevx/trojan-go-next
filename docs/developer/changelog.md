@@ -2,6 +2,36 @@
 title: "更新日志"
 ---
 
+## v1.4.0
+
+发布日期：2026-10-22。REALITY 出站：客户端可直接对接 sing-box / mihomo 的 trojan-REALITY 服务端。
+
+- **REALITY 出站**：新增 `tunnel/reality` 客户端层，浏览器指纹 ClientHello 的 `session_id` 字段内嵌 x25519 ECDH + HKDF 密封的认证凭证；凭证错误时服务端透明回落真站、客户端证书校验失败报错，不暴露代理特征。**零新增依赖**（utls v1.8.2 + Go 标准库 hkdf）。实测对 sing-box v1.14.3 trojan-REALITY 入站端到端成功（4 路并发往返、错误 short-id/public-key 双拒）
+- **组合校验**：REALITY 与 websocket、transport_plugin 互斥，配置层直接拒绝
+- **StackOptions**：客户端栈组装由 5 个 bool 参数收敛为结构体（本版与 v1.2.0 的 `GenerateClientTree` 收敛为同一重构），行为零变化
+
+## v1.3.0
+
+发布日期：2026-10-22。ShadowTLS v3 服务端（头条特性）：**免域名免证书的抗探测代理端口**，主流客户端零定制直连。
+
+- **tunnel/shadowtls 层**：ClientHello `session_id` HMAC-SHA1 截断验签；未授权连接（含主动探测）完整中继真站握手——探测者只见真站真实证书；授权后以 ServerRandom 绑定的 HMAC/XOR 密钥劫持数据帧，内层跑裸 trojan。协议规格经 ihciah/shadow-tls（Rust 原版）、mihomo、sing-box 三方一手源码逐条交叉验证
+- **strict 模式**（默认开）：真站握手非 TLS 1.3 时拒绝提供代理服务；非 strict 为 lossy 宽松模式
+- **HRR 处理 / v2 客户端回退**：HelloRetryRequest 绑定首个 ServerHello；v2 客户端连接不成功但服务端不崩溃且随后 v3 仍可用
+- **utls 布局 pin 测试**：`session_id` 注入依赖的 ClientHello 字节偏移由测试锁定，utls 升级破坏布局时测试即红
+- **实测**：mihomo v1.19.33 与 sing-box v1.14.3 真实客户端端到端 HTTP 200（含 10 路并发）；openssl/curl 探测只见到真站证书；nginx SNI 分流共存
+- 服务端每连接在 TLS 握手完成后释放嗅探缓冲（与 v1.2.0 的 RewindConn 优化衔接）
+
+## v1.2.0
+
+发布日期：2026-10-22。性能快赢包 + NAT 解禁。四项性能优化均为纯本地改动，**线上协议字节格式零变化**。
+
+- **客户端 TLS 会话复用**（修复）：`DialConn` 此前每次拨号现场新建 `tls.Config` 且从不设置 `ClientSessionCache`，`reuse_session` 配置从未生效。现共享 config + LRU 会话缓存（256），stdlib 与 utls 指纹双路径支持，握手省 1-RTT。utls 指纹路径的会话复用仅发生在 TLS 1.2（上游指纹 spec 无 PSK 扩展占位，属刻意设计，TLS 1.3 下行为与此前一致）
+- **mux 握手移出全局锁**：`DialConn` 原全程持有池锁（含完整 TLS+smux 握手数百 ms），阻塞全进程新连接；现锁内只做池簿记，并发拨号实测 1002ms→502ms。慢路径建连加闸门（同一时间至多一个握手），防止空池并发风暴打出上百载波连接击穿服务端 mux 接受队列（容量 32，溢出即丢）——该回归由 TestWebsocketDetection 加压复现并已修复，守护测试固化
+- **AddTraffic 无锁快路径**：未配置限速器时绕开锁只做原子累加（此前每次读写都抢读锁）；顺带修复 speedUpdater 对计数器 plain-read vs atomic-write 的既有数据竞争
+- **服务端 RewindConn 释放**：TLS 嗅探完成后释放握手层缓冲，实测每连接省约 2.1KB 常驻内存（50k 连接约 150MB→~6MB），嗅探分流行为字节级不变并由回归测试锁定
+- **NAT 模式解禁 router**：移除上游历史遗留的禁用守卫（网关 PREROUTING 形态无回环风险）；域名规则在 DNS 未劫持时受限，见透明代理文档
+- **其他**：trojan 客户端头部延迟 flush 由不可取消 Sleep 改为可取消等待；mux 池清理日志降噪
+
 ## v1.1.2
 
 发布日期：2026-10-22。P2 可靠性收尾修复：错误链穿透、TLS 会话恢复、客户端 ALPN。

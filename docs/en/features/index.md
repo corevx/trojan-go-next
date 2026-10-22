@@ -13,6 +13,8 @@ Trojan-Go-Next extends the original Trojan protocol with several powerful featur
 | Feature | Description | Docs |
 |---------|-------------|------|
 | [Multiplexing](/features/mux) | Connection multiplexing via smux for lower latency | 中文 |
+| [ShadowTLS v3](/features/shadowtls) | Probe-resistant port relaying a real site's TLS handshake (v1.3.0, server) | 中文 |
+| [REALITY Outbound](/features/reality) | REALITY client connecting to sing-box/mihomo trojan-REALITY servers (v1.4.0) | 中文 |
 | [WebSocket + CDN](/features/websocket) | CDN traffic relay via WebSocket over TLS (Cloudflare guide) | 中文 |
 | [Routing](/features/router) | GeoIP/GeoSite-based traffic splitting and ad blocking | 中文 |
 | [AEAD Encryption](/features/aead) | Shadowsocks AEAD secondary encryption layer | 中文 |
