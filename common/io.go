@@ -29,6 +29,14 @@ func (r *RewindReader) Read(p []byte) (int, error) {
 			return n, nil
 		}
 		r.rewound = false // all buffering content has been read
+		// 嗅探阶段结束（StopBuffering 已停追加）且回放数据已全部交付：
+		// 缓冲副本再无用途，释放底层数组，避免嗅探缓冲随连接常驻。
+		// buffering 仍在开启（未 StopBuffering）时保留 buf，维持
+		// 「回放完毕后可再次 Rewind」的原有契约（见 TestBufferedReader）。
+		if !r.buffering {
+			r.buf = nil
+			r.bufReadIdx = 0
+		}
 	}
 	n, err := r.rawReader.Read(p)
 	if r.buffering {
@@ -76,6 +84,22 @@ func (r *RewindReader) Rewind() {
 func (r *RewindReader) StopBuffering() {
 	r.mu.Lock()
 	r.buffering = false
+	r.mu.Unlock()
+}
+
+// Release 释放嗅探缓冲的底层数组。仅在已 StopBuffering 且缓冲内容确认
+// 不会再被 Rewind 回放时调用（嗅探决策已完成、缓冲内容是死数据的场景，
+// 如 TLS 握手成功后握手层缓冲中残留的 ClientHello 副本）。
+// 与回放完毕的惰性释放不同，本方法不要求经历过 Rewind；调用后 Read
+// 直接透传 rawReader，行为不变。
+func (r *RewindReader) Release() {
+	r.mu.Lock()
+	if r.buffering {
+		r.mu.Unlock()
+		panic("release while buffering")
+	}
+	r.buf = nil
+	r.bufReadIdx = 0
 	r.mu.Unlock()
 }
 
