@@ -168,14 +168,18 @@ func exchangeTags(t *testing.T, muxServer *Server, conns []tunnel.Conn, timeout 
 	}
 }
 
-// TestMuxConcurrentDial proves that concurrent DialConn calls are not
-// serialized behind the underlay handshake: with concurrency=1 two dialers
-// must each establish their own mux client, which used to happen strictly
-// sequentially under the global pool lock (>= 2*delay) and now overlaps.
+// TestMuxConcurrentDial proves two properties of the slow-path creation gate:
+// with spare capacity, concurrent dialers on an empty pool collapse onto the
+// single carrier created by the gate holder instead of each dialing its own
+// (a carrier-per-dialer burst overflows the server's mux accept channel), and
+// the total wall time stays at roughly one handshake because the waiter
+// reserves a slot on the published carrier instead of dialing again.
+// Deliberate serialization remains for genuinely exhausted pools — that is
+// the storm guard, not the old pool-lock regression.
 func TestMuxConcurrentDial(t *testing.T) {
 	const delay = 500 * time.Millisecond
 	slow := &slowDialClient{delay: delay}
-	_, muxClient, muxServer := newMuxTestStack(t, slow, 1)
+	_, muxClient, muxServer := newMuxTestStack(t, slow, 8)
 	defer muxClient.Close()
 	defer muxServer.Close()
 
@@ -202,15 +206,15 @@ func TestMuxConcurrentDial(t *testing.T) {
 			t.Fatalf("dialer %d failed: %v", i, err)
 		}
 	}
-	if dials := atomic.LoadInt32(&slow.dials); dials != dialers {
-		t.Fatalf("expected %d underlay dials (one per mux client), got %d", dialers, dials)
+	if dials := atomic.LoadInt32(&slow.dials); dials != 1 {
+		t.Fatalf("expected 1 underlay dial (concurrent dialers must share the gated carrier), got %d", dials)
 	}
-	// Serial execution of two handshakes costs at least 2*delay; parallel
-	// execution about one delay. Fail if the old serialization is back.
+	// Two handshakes back to back cost >= 2*delay; collapsing onto one
+	// carrier costs about one delay. Fail if dialers stopped sharing.
 	if elapsed >= 2*delay*80/100 {
 		t.Fatalf("concurrent DialConn looks serialized: %v elapsed for %d dials of %v each", elapsed, dialers, delay)
 	}
-	t.Logf("2 concurrent dials with %v handshake finished in %v", delay, elapsed)
+	t.Logf("2 concurrent dials with %v handshake finished in %v on 1 carrier", delay, elapsed)
 
 	exchangeTags(t, muxServer, conns, 5*time.Second)
 	for _, conn := range conns {

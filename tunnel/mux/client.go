@@ -41,6 +41,13 @@ type Client struct {
 	timeout        time.Duration
 	ctx            context.Context
 	cancel         context.CancelFunc
+	// creating gates slow-path carrier creation so at most one dialer
+	// handshakes a new underlay at a time. Without it an empty pool turns
+	// every concurrent dialer into its own carrier and the resulting burst
+	// overflows the server's mux accept channel (capacity 32), whose drop
+	// path leaves the client writing into a black hole until the smux
+	// keepalive timeout kills the session.
+	creating sync.Mutex
 	// closed is guarded by clientPoolLock. It stops a dial whose underlay
 	// handshake was already in flight when Close() ran from publishing a
 	// fresh client into the pool after Close() has drained it.
@@ -209,21 +216,36 @@ func (c *Client) DialConn(*tunnel.Address, tunnel.Tunnel) (tunnel.Conn, error) {
 	c.clientPoolLock.Unlock()
 
 	if info == nil {
-		// Slow path: every pooled client is at capacity. Establish a new
-		// smux client outside the lock so concurrent dialers are not
-		// serialized behind the underlay handshake. Concurrent callers may
-		// create redundant clients; each is immediately used by its creator
-		// and stays in the pool for later reuse.
-		var err error
-		info, err = c.newMuxClient()
-		if err != nil {
-			return nil, common.NewError("no available mux client found").Base(err)
-		}
-		if !c.publishMuxClient(info) {
-			info.underlayConn.Close()
-			info.client.Close()
+		// Slow path: every pooled client is at capacity. Creation is gated
+		// so only one dialer pays the underlay handshake at a time; the
+		// handshake runs without the pool lock, so fast-path dialers keep
+		// reserving slots on existing clients in the meantime. Waiters
+		// re-check the pool once through the gate — the carrier published
+		// by the previous holder usually has spare capacity already.
+		c.creating.Lock()
+		c.clientPoolLock.Lock()
+		if c.closed {
+			c.clientPoolLock.Unlock()
+			c.creating.Unlock()
 			return nil, common.NewError("mux client is closed")
 		}
+		info = c.reserveStreamSlot()
+		c.clientPoolLock.Unlock()
+		if info == nil {
+			var err error
+			info, err = c.newMuxClient()
+			if err != nil {
+				c.creating.Unlock()
+				return nil, common.NewError("no available mux client found").Base(err)
+			}
+			if !c.publishMuxClient(info) {
+				info.underlayConn.Close()
+				info.client.Close()
+				c.creating.Unlock()
+				return nil, common.NewError("mux client is closed")
+			}
+		}
+		c.creating.Unlock()
 	}
 	return c.openStream(info)
 }
