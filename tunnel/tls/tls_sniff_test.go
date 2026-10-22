@@ -57,6 +57,10 @@ func newSniffTestFixture(t *testing.T) *sniffTestFixture {
 	t.Cleanup(func() {
 		c.Close()
 		s.Close()
+		// redirector worker 退出时会打 log.Debug，而 log 包全局 logger
+		// 无锁：等它打完再放行后续测试，避免与 TestCheckKeyPairLoop*
+		// 的 RegisterLogger 交错触发 DATA RACE（log 包存量隐患）
+		time.Sleep(50 * time.Millisecond)
 	})
 	return f
 }
